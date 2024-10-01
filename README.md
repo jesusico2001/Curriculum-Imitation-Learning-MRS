@@ -5,9 +5,9 @@ This repository contains the implementation of a *Curriculum Learning* algorithm
 The project also includes a module for analytical ground truth data generation in 3 scenarios: *Fixed Swapping*, *Time-Varying Swapping* and *Flocking*. Finally, the evaluation setup contains various neural network architectures (MLP, GNN, LEMURS), on which the performance of the algorithm is evaluated.
 
 <p float="left">
-<img src="figures/FS.gif" height="200">
-<img src="figures/TVS.gif" height="200">
-<img src="figures/flocking.gif" height="200">
+<img src="figures/FS.gif" width="32%">
+<img src="figures/TVS.gif" width="32%">
+<img src="figures/flocking.gif" width="32%">
 </p>
 
 ## Dependencies
