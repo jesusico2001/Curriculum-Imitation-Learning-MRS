@@ -23,7 +23,7 @@ Our code is tested with Ubuntu 20.04 and Python 3.11.5. With the following depen
 In this file we explain the more direct way to run the code, using shell scripts that abstract some of the pyton script parameters. A finer parametrization of every process can be done executing the equivalent .py files.
 
 > [!IMPORTANT]
-> Before running any commands, ensure that your **current working directory** in the shell is set to **`/code`**.
+> Before running any commands, ensure that your **current working directory** in the shell is set to **`code/`**.
 
 ### Dataset generation
 
@@ -79,7 +79,7 @@ Similarly to the training, we use different scripts to evaluate models trained w
 
 ```numAgents (int)```: The number of robots in the trajectories.  4 by default.
 
-The evaluation results will be saved in a new directory, located in ```/evaluation/results```.
+The evaluation results will be saved in a new directory, located in ```code/evaluation/results/```.
 
 ## License
 
