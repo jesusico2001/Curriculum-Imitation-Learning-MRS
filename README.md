@@ -27,21 +27,59 @@ In this file we explain the more direct way to run the code, using shell scripts
 
 ### Dataset generation
 
-To generate the training and evaluation datasets, run
+To generate the training and evaluation datasets, run:
 ```bash
 ./scripts/generateDataset.sh policy numAgents numSamples
 ```
 
-where
-
-
 ```policy (str)```: The scenario to generate data about.  ["FS", "TVS", "Flocking"].
 
-```numAgents (int)```: The scenario to generate data about.  ["FS", "TVS", "Flocking"].
+```numAgents (int)```: The number of robots in the generated trajectories (must be even in some scenarios).  4 by default.
+
+```numSamples (int)```: The number of samples in the generated trajectories. 250 by default.
 
 ### Training
+To train models with Curriculum Learning or the classic non-curriculum training, run the following comands respectively:
+```bash
+./scripts/trainCurriculum.sh policy architecture nLayers nEpochs maxNumSamples numAgents
+```
+```bash
+./scripts/trainClassic.sh policy architecture nLayers nEpochs maxNumSamples numAgents
+```
+```policy (str)```: The scenario to generate data about.  ["FS", "TVS", "Flocking"].
+
+```architecture (str)```: The neural network architecture to train.  ["MLP", "GNN", "LEMURS"].
+
+```nLayers (int)```: The depth of the neural network.  3 by default.
+
+```nEpochs (int)```: Total iterations of the training loop.  40000 by default.
+
+```maxNumSamples (int)```: Maximum time horizon to reach during the training.  50 by default.
+
+```numAgents (int)```: The number of robots in the trajectories.  4 by default.
 
 ### Evaluation
+
+Similarly to the training, we use different scripts to evaluate models trained with and without CL, these are;
+```bash
+./scripts/evalCurriculum.sh policy architecture nLayers nEpochs maxNumSamples numAgents
+```
+```bash
+./scripts/evalClassic.sh policy architecture nLayers nEpochs maxNumSamples numAgents
+```
+```policy (str)```: The scenario to generate data about.  ["FS", "TVS", "Flocking"].
+
+```architecture (str)```: The neural network architecture to train.  ["MLP", "GNN", "LEMURS"].
+
+```nLayers (int)```: The depth of the neural network.  3 by default.
+
+```nEpochs (int)```: Total iterations of the training loop.  40000 by default.
+
+```maxNumSamples (int)```: Maximum time horizon to reach during the training.  50 by default.
+
+```numAgents (int)```: The number of robots in the trajectories.  4 by default.
+
+The evaluation results will be saved in a new directory, located in ```/evaluation/results```.
 
 ## License
 
