@@ -77,7 +77,7 @@ Similarly to the training, we use different scripts to evaluate models trained w
 
 ```maxNumSamples (int)```: Maximum time horizon to reach during the training.  50 by default.
 
-```numAgents (int)```: The number of robots in the trajectories.  4 by default.
+```numAgents (int)```: The number of robots in the evaluated trajectories, assumes we train with 4 robots.  4 by default.
 
 The evaluation results will be saved in a new directory, located in ```code/evaluation/results/```.
 
