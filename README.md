@@ -1,6 +1,6 @@
-# Curriculum Imitation Learning of Distributed Multi-Robot Policies
+# Curriculum Imitation Learning of Distributed Multi-Robot Navigation Policies
 
-This repository contains the implementation of a *Curriculum Learning* algorithm for distributed navigation policies in Multi-Robots Systems. This algorithm schedules the difficulty of training trajectories and dynamically fragments demonstrations to match the scheduled difficulty.
+This repository contains the implementation of a *Curriculum Learning* algorithm for distributed navigation policies in Multi-Robots Systems. This algorithm schedules the difficulty of training trajectories (based on their time-horizons) and dynamically fragments demonstrations to match the scheduled difficulty.
 
 The project also includes a module for analytical ground truth data generation in 3 scenarios: *Fixed Swapping*, *Time-Varying Swapping* and *Flocking*. Finally, the evaluation setup contains various neural network architectures (MLP, GNN, LEMURS), on which the performance of the algorithm is evaluated.
 
