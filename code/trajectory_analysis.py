@@ -127,8 +127,8 @@ def plotFrame(my_learned_trajectory, real_trajectory, nEpochs, epoch_save, maxNu
         while i>0 and epoch_save < numSamplesLog[i][0]:
             i -= 1
         actual_numsamples = numSamplesLog[i][1]
-        plt.figtext(0.12, 0.9, "Iteraciones totales: " + str(nEpochs)+ " - Iteración actual: " + str(epoch_save) ,fontsize="15")
-        plt.figtext(0.7, 0.9, "Horizonte actual: " + str(actual_numsamples) + "/" +str(maxNumSamples) ,fontsize="15")
+        plt.figtext(0.12, 0.9, "Total iterations: " + str(nEpochs)+ " - Current iteration: " + str(epoch_save) ,fontsize="15")
+        plt.figtext(0.7, 0.9, "Current horizon: " + str(actual_numsamples) + "/" +str(maxNumSamples) ,fontsize="15")
 
     plotTrajectories(real_trajectory, numAgents, 'dotted', "Real trajectory")
     plotFinalPosition(real_trajectory, numAgents, 'o')

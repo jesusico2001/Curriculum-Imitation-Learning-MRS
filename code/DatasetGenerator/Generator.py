@@ -30,7 +30,7 @@ def generateDataset(name, realSys, na, numData, numSamples, time, step_size):
 
     return demonstrations
 
-def main(policy="FS", numTrain=20000, numTests=20000, numSamples=5, seed=42, numAgents=4):
+def main(policy="FS", numTrain=20000, numVal=20000, numTests=20000, numSamples=5, seed=42, numAgents=4):
 
     # Set seed
     torch.manual_seed(seed)
@@ -49,19 +49,22 @@ def main(policy="FS", numTrain=20000, numTests=20000, numSamples=5, seed=42, num
 
     # Build datasets
     train_data = generateDataset("train", realSys, numAgents, numTrain, numSamples, time, step_size)
+    val_data = generateDataset("val", realSys, numAgents, numVal, numSamples, time, step_size)
     test_data = generateDataset("test", realSys, numAgents, numTests, numSamples, time, step_size)
     
     # Store data
-    torch.save(train_data, 'saves/datasets/'+policy+str(numAgents)+'_trainData_'+str(numTrain)+'_'+str(numTests)+'_'+str(numSamples)+'_'+str(seed)+'.pth')
-    torch.save(test_data, 'saves/datasets/'+policy+str(numAgents)+'_testData_'+str(numTrain)+'_'+str(numTests)+'_'+str(numSamples)+'_'+str(seed)+'.pth')
+    torch.save(train_data, 'saves/datasets/'+policy+str(numAgents)+'_trainData_'+str(numTrain)+'_'+str(numSamples)+'_'+str(seed)+'.pth')
+    torch.save(val_data, 'saves/datasets/'+policy+str(numAgents)+'_valData_'+str(numVal)+'_'+str(numSamples)+'_'+str(seed)+'.pth')
+    torch.save(test_data, 'saves/datasets/'+policy+str(numAgents)+'_testData_'+str(numTests)+'_'+str(numSamples)+'_'+str(seed)+'.pth')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset generator for LEMURS')
     parser.add_argument('--policy', type=str, nargs=1, help='control policy name')
     parser.add_argument('--numTrain', type=int, nargs=1, help='number of instances for training')
+    parser.add_argument('--numVal', type=int, nargs=1, help='number of instances for validation')
     parser.add_argument('--numTests', type=int, nargs=1, help='number of instances for testing')
     parser.add_argument('--numSamples', type=int, nargs=1, help='number of samples per instance')
     parser.add_argument('--seed', type=int, nargs=1, help='seed to generate reproducible data')
     parser.add_argument('--numAgents', type=int, nargs=1, help='number of agents')
     args = parser.parse_args()
-    main(args.policy[0], args.numTrain[0], args.numTests[0], args.numSamples[0], args.seed[0], args.numAgents[0])
+    main(args.policy[0], args.numTrain[0], args.numVal[0], args.numTests[0], args.numSamples[0], args.seed[0], args.numAgents[0])

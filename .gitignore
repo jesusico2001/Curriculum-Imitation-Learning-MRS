@@ -1,0 +1,57 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+*.whl
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Virtual envs
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# PyTorch Model Files
+*.pt
+*.pth
+*.pkl
+
+# Logs
+*.log
+
+# Configs IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# Tmp files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Hidden 
+.*.swp
+
+# Config PyCharm
+*.iml
+
+# Cache
+__pycache__/
+.cache/
