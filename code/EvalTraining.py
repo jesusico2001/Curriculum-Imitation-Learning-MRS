@@ -42,7 +42,7 @@ def main(control_policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000,
     path_results = "evaluation/results/"+train_info+"/"+str(numAgents)+"_agents"
 
     path_valData = 'saves/datasets/'+control_policy+str(numAgents)+'_valData_'+str(numVal)+'_'+str(250)+'_'+str(seed_data)+'.pth'
-    path_testData = 'saves/datasets/'+control_policy+str(numAgents)+'_valData_'+str(numVal)+'_'+str(250)+'_'+str(seed_data)+'.pth'
+    path_testData = 'saves/datasets/'+control_policy+str(numAgents)+'_testData_'+str(numTests)+'_'+str(250)+'_'+str(seed_data)+'.pth'
 
     try:
         os.makedirs(path_results)
@@ -67,19 +67,17 @@ def main(control_policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000,
     with torch.no_grad():
         myLearnSystem.eval()
 
-    # Validation
-    # ==========
-    val_data = torch.load(path_valData).to(myLearnSystem.device)
-    initial_states = val_data[0,:,:]
-    real_trajectories = val_data[:,:,:4*numAgents]
-    print("Validation trajectories loaded successfully")
-    print("Size: ", val_data.size())
-
-    exit()
 
     # NumSamples evolution
     numSamplesLog = getNumSampelesLog(epochs, maxNumSamples, interval_policy, interval_parameter, increment_policy, increment_parameter)
     print("NumSamples evolution generated successfully")
+
+    # Validation
+    # ==========
+    val_data = torch.load(path_valData).to(myLearnSystem.device)
+    initial_states = val_data[0,:,:]
+    real_trajectories = val_data
+    print("Validation trajectories loaded successfully")
 
     # Video evolution
     fig = plt.figure(figsize=(14,12))
@@ -93,7 +91,7 @@ def main(control_policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000,
 
     # Best epoch
     print("\nFinding best configuration along the training...")
-    learned_trajectories = torch.zeros(true_nSamples, NUM_TRAYECTORIAS, 8 * numAgents)
+    learned_trajectories = torch.zeros(true_nSamples, numVal, 8 * numAgents)
     loss_evo = []
     with torch.no_grad():
         for epoch_save in range(0, epochs, VAL_PERIOD):
@@ -125,9 +123,8 @@ def main(control_policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000,
     # Load test data
     test_data = torch.load(path_testData).to(myLearnSystem.device)
     initial_states = test_data[0,:,:]
-    real_trajectories = test_data[:,:,:4*numAgents]
+    real_trajectories = test_data
     print("Test trajectories loaded successfully")
-    print("Size: ", test_data.size())
 
     # Load best model from validation
     myLearnSystem.load_state_dict(torch.load(path_checkpoints+"/epoch_"+str(bestEpoch)+".pth", map_location=device))
