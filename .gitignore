@@ -1,5 +1,6 @@
 #Evaluation results
 code/evaluation/results/*
+code/scripts/tests/radar_graphs/*
 
 # Python
 __pycache__/

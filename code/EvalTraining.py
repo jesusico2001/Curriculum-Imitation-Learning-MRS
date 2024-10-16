@@ -147,6 +147,7 @@ def main(control_policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000,
     real_smoothness = 0
     area_trajectories = 0
     for i in range(numTests):
+        
         learn_avg_dist += avgAgentDist(learned_trajectories[:,i,:], numAgents)
         learn_min_dist += minAgentDist(learned_trajectories[:,i,:], numAgents)
         learn_smoothness += getSmoothness(learned_trajectories[:,i,:], numAgents, step_size)
@@ -162,13 +163,16 @@ def main(control_policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000,
     learn_smoothness /= numTests
     real_smoothness /= numTests
     area_trajectories /= numTests
+    loss_test = L2_loss((learned_trajectories[:, :, :4 * numAgents].reshape(-1, 4 * numAgents)).to(device), real_trajectories[:, :, :4 * numAgents].reshape(-1, 4 * numAgents).to(device))
+    
+    print("L2 loss     : ", float(loss_test))
     print("Average Dist: Learned = ", float(learn_avg_dist), " - Real = ", float(real_avg_dist))
     print("Minimal Dist: Learned = ", float(learn_min_dist), " - Real = ", float((real_min_dist)))
     print("Smoothness  : Learned = ", float(learn_smoothness), " - Real = ", float((real_smoothness)))
     print("Area        : ", float(area_trajectories))
 
     with open(path_results+"/info.txt", 'w') as file:
-        text = "Best epoch: "+str(bestEpoch)+"\n" + "L2 loss: "+str(bestL2) + "\nAvg dist error: "\
+        text = "Best epoch: "+str(bestEpoch)+"\n" + "L2 loss: "+str(float(loss_test)) + "\nAvg dist error: "\
             +str(float(learn_avg_dist)-float(real_avg_dist)) + "\nMin dist error: " \
             +str(float(learn_min_dist)-float(real_min_dist)) + "\nSmoothness error: "\
             +str(float(learn_smoothness)-float(real_smoothness)) + "\nArea between curves: "\
