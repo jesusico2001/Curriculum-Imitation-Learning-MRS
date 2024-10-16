@@ -5,14 +5,14 @@ import time
 from TrainingTools import *
 from LearnSystem import LearnSystemBuilder
 
-def main(policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000, numTrain=20000, numTests=20000, 
+def main(policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000, numTrain=20000, numVal=20000, 
          maxNumSamples=5, seed_data=42, seed_train=42, numAgents=4, interval_policy='fixed',
          interval_parameter=500, increment_policy ='fixed', increment_parameter=1):
     # Set fixed random number seed
     torch.manual_seed(seed_train)
     
     train_info = policy+str(numAgents)+architecture+'_'+str(nAttLayers)+"_"+str(epochs)\
-        +"_"+str(numTrain)+"_"+str(numTests)+"_"+str(maxNumSamples)+"_"+str(seed_train)+"_"\
+        +"_"+str(numTrain)+"_"+str(numVal)+"_"+str(maxNumSamples)+"_"+str(seed_train)+"_"\
         +str(seed_data)+"_"+str(interval_policy)+"_"+str(interval_parameter)+"_"\
         +str(increment_policy)+"_"+str(increment_parameter)
     
@@ -40,7 +40,7 @@ def main(policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000, numTrai
     optimizer = torch.optim.Adam(learn_system.parameters(), lr=learning_rate, weight_decay=0.0)
 
     # Build dataset    
-    dsBuilder = DatasetBuilder(policy, numAgents, numTrain, numTests, seed_data, parameters["device"])    
+    dsBuilder = DatasetBuilder(policy, numAgents, numTrain, numVal, seed_data, parameters["device"])    
 
     # Define numSamples evolution
     interval_function = CuadraticFunction.ModelInterval(interval_policy, interval_parameter)
@@ -50,7 +50,7 @@ def main(policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000, numTrai
     startTime = time.time()
 
     TrainLosses, ValLosses, ValEpochs, numSamplesLog = trainingLoop(learn_system, dsBuilder, optimizer,                                                                       
-        0, epochs, numAgents, numTrain, numTests, 5, maxNumSamples, path_checkpoints, interval_function, increment_function)
+        0, epochs, numAgents, 5, maxNumSamples, path_checkpoints, interval_function, increment_function)
     
     finishTime = time.time()
     print('Training process has finished. Saving evaluation info...')
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     parser.add_argument('--nAttLayers', type=int, nargs=1, help='number of attention layers used')
     parser.add_argument('--nEpochs', type=int, nargs=1, help='number of epochs during trainings')
     parser.add_argument('--numTrain', type=int, nargs=1, help='number of instances for training')
-    parser.add_argument('--numTests', type=int, nargs=1, help='number of instances for testing')
+    parser.add_argument('--numVal', type=int, nargs=1, help='number of instances for validation')
     parser.add_argument('--maxNumSamples', type=int, nargs=1, help='maximum number of samples per instance (min is 5)')
     parser.add_argument('--seed_data', type=int, nargs=1, help='seed used for generating the data')
     parser.add_argument('--seed_train', type=int, nargs=1, help='seed to generate reproducible data')
@@ -85,6 +85,6 @@ if __name__ == '__main__':
     parser.add_argument('--increment_parameter', type=float, nargs=1, help='parameter: c, b or maxValue according to the policy')
 
     args = parser.parse_args()
-    main(args.policy[0], args.architecture[0], args.nAttLayers[0], args.nEpochs[0], args.numTrain[0], args.numTests[0], 
+    main(args.policy[0], args.architecture[0], args.nAttLayers[0], args.nEpochs[0], args.numTrain[0], args.numVal[0], 
          args.maxNumSamples[0], args.seed_data[0], args.seed_train[0], args.numAgents[0], args.interval_policy[0],
          args.interval_parameter[0], args.increment_policy[0] ,args.increment_parameter[0])

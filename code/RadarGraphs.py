@@ -97,13 +97,13 @@ def main(numAgents, evaluation_paths):
     while os.path.exists("scripts/tests/radar_graphs/test"+str(i)):
         i += 1
     configurations = dict(zip(eval_id, eval_info))
-    os.makedirs("scripts/tests/radar_graphs/test"+str(i))
+    os.makedirs("scripts/radar_graphs/test"+str(i))
     plotRadars(configurations, "scripts/tests/radar_graphs/test"+str(i))
 
     return
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='LEMURS training for the flocking problem')
+    parser = argparse.ArgumentParser(description='Radar graphs generator')
     parser.add_argument('--numAgents', type=int, nargs=1, help='number of agents during evaluation')
     parser.add_argument('--eval_paths', type=str, nargs="*", help='list of paths of the evaluations')
 

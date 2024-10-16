@@ -7,20 +7,20 @@ def L2_loss(u, v):
     return (u - v).pow(2).mean()
 
 class DatasetBuilder():
-    def __init__(self, policy, numAgents,numTrain, numTests, seed_data, device):
+    def __init__(self, policy, numAgents,numTrain, numValidation, seed_data, device):
         self.policy = policy
         self.numAgents = numAgents
         self.numTrain = numTrain
-        self.numTests = numTests
+        self.numValidation = numValidation
         self. seed_data = seed_data
         self.device = device
         
     def BuildDatasets(self, numSamples):
         # Train
-        #'datasets/'+policy+str(numAgents)+'_inputsTrain_'+str(numTrain)+'_'+str(numTests)+'_'+str(numSamples)+'_'+str(seed)+'.pth'
-        train_data = torch.load('saves/datasets/'+self.policy+str(self.numAgents)+'_trainData_'+str(self.numTrain)+'_'+str(self.numTests)+'_'+str(numSamples)+'_'+str(self.seed_data)+'.pth').to(self.device)
+        #'datasets/'+policy+str(numAgents)+'_inputsTrain_'+str(numTrain)+'_'+str(numValidation)+'_'+str(numSamples)+'_'+str(seed)+'.pth'
+        train_data = torch.load('saves/datasets/'+self.policy+str(self.numAgents)+'_trainData_'+str(self.numTrain)+'_'+str(numSamples)+'_'+str(self.seed_data)+'.pth').to(self.device)
         # Validation
-        val_data = torch.load('saves/datasets/'+self.policy+str(self.numAgents)+'_testData_'+str(self.numTrain)+'_'+str(self.numTests)+'_'+str(numSamples)+'_'+str(self.seed_data)+'.pth').to(self.device)
+        val_data = torch.load('saves/datasets/'+self.policy+str(self.numAgents)+'_valData_'+str(self.numValidation)+'_'+str(numSamples)+'_'+str(self.seed_data)+'.pth').to(self.device)
         
         return train_data, val_data
 
@@ -117,8 +117,7 @@ def buildInputsTargets(trajectories, numSamples, batch_size, device):
 
     return inputs, targets
 
-def trainingLoop(learn_system, datasetBuilder, optimizer, initial_epoch, epochs, numAgents, numTrain, numTests, 
-                 initial_numSamples, maxNumSamples, path_checkpoint, interval_function:CuadraticFunction , increment_function:CuadraticFunction):
+def trainingLoop(learn_system, datasetBuilder, optimizer, initial_epoch, epochs, numAgents, initial_numSamples, maxNumSamples, path_checkpoint, interval_function:CuadraticFunction , increment_function:CuadraticFunction):
     # Hyperparameters, the typical ones
     step_size       = 0.04
 
@@ -138,7 +137,7 @@ def trainingLoop(learn_system, datasetBuilder, optimizer, initial_epoch, epochs,
     nextEpochVal = initial_epoch
 
     train_size      = 100
-    tests_size      = 100
+    validation_size      = 100
     
     # Log train and evaluation loss
     TrainLosses = []
@@ -182,7 +181,7 @@ def trainingLoop(learn_system, datasetBuilder, optimizer, initial_epoch, epochs,
                 nextEpochVal += VAL_PERIOD
 
             # Build targets and validate
-            inputs_val, target_val = buildInputsTargets(val_data, numSamples, tests_size, learn_system.device)
+            inputs_val, target_val = buildInputsTargets(val_data, numSamples, validation_size, learn_system.device)
             loss_val = validate(learn_system, inputs_val, target_val, numAgents, step_size, numSamples)
             
             # Print and store (in RAM) eval info

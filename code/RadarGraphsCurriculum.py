@@ -118,7 +118,7 @@ def main(numAgents, evaluation_paths):
     return
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='LEMURS training for the flocking problem')
+    parser = argparse.ArgumentParser(description='Radar graphs generator that compares CL and classic.')
     parser.add_argument('--numAgents', type=int, nargs=1, help='number of agents during evaluation')
     parser.add_argument('--eval_paths', type=str, nargs="*", help='list of paths of the evaluations')
 
