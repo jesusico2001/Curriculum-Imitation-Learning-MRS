@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import time
 from torch import nn, torch
 
 class AttentionModule(nn.Module, ABC):
@@ -42,9 +43,8 @@ class AttentionModule(nn.Module, ABC):
 
     def _attentionLayers(self, x, L):
         numNeighbors = L[:, 0, :].ge(1).double().sum(dim=1).view(-1, 1, 1) + 1
-
         L = L[:,0,:].unsqueeze(1).repeat(1,self.r,1)
-
+        
         input = x
         # print("Inicio ", self.__class__.__name__, "-  L:", L.size(), " - input: ", input.size())
         for layer in range(self.nLayers):
@@ -57,8 +57,11 @@ class AttentionModule(nn.Module, ABC):
             input = self.activation_swish(torch.bmm(self.weights_o[layer].unsqueeze(dim=0).repeat(x.shape[0], 1, 1), o))
             
             # Remask to recreate the perception bias
+            
+            # self.remask_bias = False #TODO: NO TE OLVIDES DE QUITARLO
+            
             if self.remask_bias and layer != self.nLayers-1:
-                #print("\tatt - Lmid:", L.size(), " - input: ", input.size())
+                #print("\tatt - Lmid:", L.size(), " - input: ", input.size()
                 input = L * input
 
         del Q, K, V, o
