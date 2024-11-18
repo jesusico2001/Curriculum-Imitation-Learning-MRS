@@ -10,7 +10,6 @@ interval_parameter=$8
 increment_policy=$9
 increment_parameter=${10}
 
-
 python3 EvalTraining.py --policy $policy --architecture $architecture --nAttLayers $nAttLayers \
     --nEpochs $nEpochs --numTrain 20000 --numVal 2000 --numTests 2000 --maxNumSamples $maxNumSamples --seed_train 42 \
     --seed_data 42 --numAgents $numAgents --numAgents_train 4 --interval_policy $interval_policy --interval_parameter $interval_parameter \

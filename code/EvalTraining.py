@@ -9,8 +9,6 @@ from LearnSystem import LearnSystemBuilder
 from trajectory_analysis import *
 from TrainingTools import *
 
-VAL_PERIOD = 100
-
 def getNumSampelesLog(epochs, maxNumSamples, interval_policy, interval_parameter, increment_policy, increment_parameter):
     interval_function = CuadraticFunction.ModelInterval(interval_policy, interval_parameter)
     increment_function = CuadraticFunction.ModelIncrement(increment_policy, increment_parameter)
@@ -37,9 +35,10 @@ def main(control_policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000,
     train_info = control_policy+str(numAgents_train)+architecture+'_'+str(nAttLayers)+"_"+str(epochs)\
         +"_"+str(numTrain)+"_"+str(numVal)+"_"+str(maxNumSamples)+"_"+str(seed_train)+"_"\
         +str(seed_data)+"_"+str(interval_policy)+"_"+str(interval_parameter)+"_"\
-        +str(increment_policy)+"_"+str(increment_parameter)
+        +str(increment_policy)+"_"+str(increment_parameter)+"_babySteps"
     path_checkpoints = "saves/checkpoints/"+train_info
     path_results = "evaluation/results/"+train_info+"/"+str(numAgents)+"_agents"
+    path_epochs = "evaluation/loss_evo/"+train_info+"/valEpochs.pth"
 
     path_valData = 'saves/datasets/'+control_policy+str(numAgents)+'_valData_'+str(numVal)+'_'+str(250)+'_'+str(seed_data)+'.pth'
     path_testData = 'saves/datasets/'+control_policy+str(numAgents)+'_testData_'+str(numTests)+'_'+str(250)+'_'+str(seed_data)+'.pth'
@@ -53,11 +52,11 @@ def main(control_policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000,
         else:
             print("Aborting evaluation...\n")
             exit(0)
-
+    
     # Hyperparameters   
     step_size       = 0.04
     time            = 10.0
-    true_nSamples   = int(time / step_size)
+    numSamples_eval   = int(time / step_size)
     simulation_time = torch.linspace(0, time, int(time/step_size))
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -72,6 +71,14 @@ def main(control_policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000,
     numSamplesLog = getNumSampelesLog(epochs, maxNumSamples, interval_policy, interval_parameter, increment_policy, increment_parameter)
     print("NumSamples evolution generated successfully")
 
+    try:
+        val_epochs = torch.load(path_epochs)
+    except Exception:
+            print("Could not load the validation epochs to consider earlyStopping in the epochs.")
+    real_epochs = val_epochs[-1]
+
+    print("Real epochs obtained = ", real_epochs)
+
     # Validation
     # ==========
     val_data = torch.load(path_valData).to(myLearnSystem.device)
@@ -81,7 +88,7 @@ def main(control_policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000,
 
     # Video evolution
     fig = plt.figure(figsize=(14,12))
-    ani = FuncAnimation(fig, updateFrame, frames=int(epochs/EPOCHS_PER_FRAME), interval=60,
+    ani = FuncAnimation(fig, updateFrame, frames=int(real_epochs/EPOCHS_PER_FRAME), interval=60,
                 fargs=(myLearnSystem, initial_states[0].to(device), real_trajectories[:,0,:].to(device), 
                         epochs, maxNumSamples, numAgents,device, simulation_time, step_size, path_checkpoints, numSamplesLog))
     ani.save(path_results+"/video.mp4", writer='ffmpeg')
@@ -91,13 +98,14 @@ def main(control_policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000,
 
     # Best epoch
     print("\nFinding best configuration along the training...")
-    learned_trajectories = torch.zeros(true_nSamples, numVal, 8 * numAgents)
+    learned_trajectories = torch.zeros(numSamples_eval, numVal, 8 * numAgents)
+
     loss_evo = []
     with torch.no_grad():
-        for epoch_save in range(0, epochs, VAL_PERIOD):
+        for epoch_save in range(0, real_epochs, VAL_PERIOD):
             myLearnSystem.load_state_dict(torch.load(path_checkpoints+"/epoch_"+str(epoch_save)+".pth", map_location=device))
             learned_trajectories = myLearnSystem.forward(initial_states.to(device), simulation_time, step_size)
-            loss = L2_loss((learned_trajectories[:, :, :4 * numAgents].reshape(-1, 4 * numAgents)).to(device), real_trajectories[:, :, :4 * numAgents].reshape(-1, 4 * numAgents).to(device))
+            loss = L2_loss((learned_trajectories[:, :, :4 * numAgents].reshape(-1, 4 * numAgents)).to(device), real_trajectories[:, :, :4 * numAgents].reshape(-1, 4 * numAgents).to(device), torch.full([real_trajectories.shape[1]], numSamples_eval))
             loss_evo.append(loss.detach().cpu().numpy())
             print(".",end="", flush=True)
 
@@ -110,7 +118,7 @@ def main(control_policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000,
     torch.save(loss_evo, path_results+'/error_evo.pth')
     plt.clf()
     plt.yscale('log')
-    plt.plot(range(0, epochs, VAL_PERIOD), loss_evo, marker='o', linestyle='solid', color='blue')
+    plt.plot(range(0, real_epochs, VAL_PERIOD), loss_evo, marker='o', linestyle='solid', color='blue')
     plt.xlabel('Iterations', fontsize=20)
     plt.ylabel('Loss $\mathcal{L}$', fontsize=20)
     plt.xticks(fontsize=15)
@@ -163,7 +171,7 @@ def main(control_policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000,
     learn_smoothness /= numTests
     real_smoothness /= numTests
     area_trajectories /= numTests
-    loss_test = L2_loss((learned_trajectories[:, :, :4 * numAgents].reshape(-1, 4 * numAgents)).to(device), real_trajectories[:, :, :4 * numAgents].reshape(-1, 4 * numAgents).to(device))
+    loss_test = L2_loss((learned_trajectories[:, :, :4 * numAgents].reshape(-1, 4 * numAgents)).to(device), real_trajectories[:, :, :4 * numAgents].reshape(-1, 4 * numAgents).to(device), torch.full([real_trajectories.shape[1]], numSamples_eval))
     
     print("L2 loss     : ", float(loss_test))
     print("Average Dist: Learned = ", float(learn_avg_dist), " - Real = ", float(real_avg_dist))
