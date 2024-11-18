@@ -46,21 +46,25 @@ def main(policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000, numTrai
     interval_function = CuadraticFunction.ModelInterval(interval_policy, interval_parameter)
     increment_function = CuadraticFunction.ModelIncrement(increment_policy, increment_parameter)
 
+    old_task_quota = 0.0 if interval_parameter==0.0 and increment_parameter==0.0 else 0.0
+    print("Training with ", old_task_quota*100, "% smaller data")
+
     #Train
     startTime = time.time()
 
-    TrainLosses, ValLosses, ValEpochs, numSamplesLog = trainingLoop(learn_system, dsBuilder, optimizer,                                                                       
-        0, epochs, numAgents, 5, maxNumSamples, path_checkpoints, interval_function, increment_function)
+    TrainLosses, ValLosses, ValLosses_scalability, ValEpochs, numSamplesLog = trainingLoop(learn_system, dsBuilder, optimizer,                                                                       
+        0, epochs, numAgents, 5, maxNumSamples, path_checkpoints, interval_function, increment_function, old_task_quota, True)
     
-    finishTime = time.time()
-    print('Training process has finished. Saving evaluation info...')
+    totalTime = time.time() - startTime
+    print('Training process has finished in '+str(totalTime/60)+' min  '+str(totalTime%60)+' seg. Saving evaluation info...')
 
     # Save
     torch.save(TrainLosses, path_loss+'/trainLosses.pth')
     torch.save(ValLosses, path_loss+'/valLosses.pth')
+    torch.save(ValLosses_scalability, path_loss+'/valLosses_scalability.pth')
     torch.save(ValEpochs, path_loss+'/valEpochs.pth')
     torch.save(numSamplesLog, path_loss+'/numSamplesLog.pth')
-    torch.save(finishTime-startTime, path_loss+'/time.pth')
+    torch.save(totalTime, path_loss+'/time.pth')
 
     # Free unused memory
     if torch.cuda.is_available():

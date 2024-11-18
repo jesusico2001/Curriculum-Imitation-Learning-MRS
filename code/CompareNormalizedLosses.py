@@ -11,8 +11,9 @@ def main(trainLosses, descriptions):
     loss_evo = []
     epochs = []
     for path in trainLosses:
-        loss_evo.append(torch.load(path))
-        epochs.append(int(path.split("_")[2]))
+        model_loss = torch.load(path)
+        loss_evo.append(model_loss)
+        epochs.append(len(model_loss)*EvalTraining.VAL_PERIOD)
         nModels += 1
 
     # Crear el gráfico
