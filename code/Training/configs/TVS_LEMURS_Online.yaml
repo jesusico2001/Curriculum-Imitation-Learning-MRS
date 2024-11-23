@@ -1,0 +1,16 @@
+
+learn_system:
+  type: LEMURS
+  policy: TVS
+  num_agents: 4
+  depth: 3
+teacher: 
+  max_difficulty: 50
+  type: online
+general:
+  epochs: 40000
+  train_size: 20000
+  val_size: 2000
+  seed_data: 42
+  seed_train: 50
+  early_stopping: false

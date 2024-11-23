@@ -4,7 +4,7 @@ import torch
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 
-import EvalTraining
+import EvalTraining as EvalTraining
 
 def main(trainLosses, descriptions):
     nModels = 0

@@ -2,7 +2,7 @@ import argparse
 import os
 import torch
 import time
-from TrainingTools import *
+from Training.TrainingTools import *
 from LearnSystem import LearnSystemBuilder
 
 def main(policy='FS', architecture='LEMURS', nAttLayers=3, epochs=40000, numTrain=20000, numVal=20000, 

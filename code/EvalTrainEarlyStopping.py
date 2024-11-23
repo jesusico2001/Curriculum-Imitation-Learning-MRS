@@ -7,7 +7,7 @@ from matplotlib.animation import FuncAnimation
 from DatasetGenerator import RealSystemBuilder
 from LearnSystem import LearnSystemBuilder
 from trajectory_analysis import *
-from TrainingTools import *
+from Training.TrainingTools import *
 
 def getNumSampelesLog(epochs, maxNumSamples, interval_policy, interval_parameter, increment_policy, increment_parameter):
     interval_function = CuadraticFunction.ModelInterval(interval_policy, interval_parameter)

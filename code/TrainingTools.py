@@ -1,7 +1,5 @@
 import torch
 
-MIN_INTERVAL = 350
-MIN_INCREMENT = 1
 
 def L2_loss(u, v, ns_distr):
     sumErrors = torch.sum((u - v).pow(2)) 
@@ -30,55 +28,6 @@ class DatasetBuilder():
         
         return train_data, val_data_list
 
-class CuadraticFunction():
-    def __init__(self, a, b, c):
-        self.a = a
-        self.b = b
-        self.c = c
-
-    def compute(self, x):
-        return int(self.a * pow(x, 2) + self.b * x + self.c)
-
-    @staticmethod
-    def modelConstant(c):
-        return CuadraticFunction(0, 0, c)
-    
-    @staticmethod
-    def modelLinear(minVal, maxVal):
-        b = (maxVal - minVal) / 245
-        c = minVal - 5*b
-        return CuadraticFunction(0, b, c)
-    
-    @staticmethod
-    def modelLinearModulated(minVal, maxVal):
-        a = (minVal - maxVal) / 60025
-        b = ( 500 * maxVal - minVal) / 60025
-        c = (62500 * minVal - 2475 *  maxVal) / 60025
-        return CuadraticFunction(a, b, c)
-    
-    @staticmethod
-    def ModelInterval(policy, parameter):
-        if policy == "fixed":
-            return CuadraticFunction.modelConstant(parameter)
-        elif policy == "linear":
-            return CuadraticFunction.modelLinear(MIN_INTERVAL, parameter)
-        elif policy == "modulated":
-            return CuadraticFunction.modelLinearModulated(MIN_INTERVAL, parameter)
-        else:
-            print("Interval Function - "+ policy  +" is not a policy...\n")
-            exit(0)
-    @staticmethod
-    def ModelIncrement(policy, parameter):
-        if policy == "fixed":
-            return CuadraticFunction.modelConstant(parameter)
-        elif policy == "linear":
-            return CuadraticFunction.modelLinear(MIN_INCREMENT, parameter)
-        elif policy == "modulated":
-            return CuadraticFunction.modelLinearModulated(MIN_INCREMENT, parameter)
-        else:
-            print("Increment Function - "+ policy  +" is not a policy...\n")
-            exit(0)
-        
 
 # TRAINING LOOP
 # =====================================================
@@ -145,7 +94,7 @@ def buildInputsTargets(trajectories, batch_size, difficulties, device):
     return inputs, targets, top_difficulty
 
 VAL_PERIOD = 50
-def trainingLoop(learn_system, datasetBuilder, optimizer, initial_epoch, epochs, numAgents, initial_numSamples, maxNumSamples, path_checkpoint, interval_function:CuadraticFunction , increment_function:CuadraticFunction, old_task_quota, ACTIVATE_EARLY_STOPPING):
+def trainingLoop(learn_system, datasetBuilder, optimizer, initial_epoch, epochs, numAgents, initial_numSamples, maxNumSamples, path_checkpoint0, interval_function:CuadraticFunction , increment_function:CuadraticFunction, old_task_quota, ACTIVATE_EARLY_STOPPING):
     # Hyperparameters, the typical ones
     step_size       = 0.04
 

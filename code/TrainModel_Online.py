@@ -3,7 +3,7 @@ import os
 import torch
 import time
 import numpy
-from TrainingTools import *
+from Training.TrainingTools import *
 from LearnSystem import LearnSystemBuilder
 
 def sampleDifficulties(difficulty_distribution, numSamples):

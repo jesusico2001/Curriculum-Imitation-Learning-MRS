@@ -1,0 +1,21 @@
+
+learn_system:
+  type: LEMURS
+  policy: FS
+  num_agents: 4
+  depth: 3
+teacher: 
+  max_difficulty: 50
+  type: babysteps
+  interval_policy: fixed
+  interval_parameter: 800
+  increment_policy: fixed
+  increment_parameter: 1
+  old_task_quota: 0
+general:
+  epochs: 100
+  train_size: 20000
+  val_size: 2000
+  seed_data: 42
+  seed_train: 50
+  early_stopping: false
