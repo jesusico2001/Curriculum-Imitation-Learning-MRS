@@ -8,6 +8,7 @@ class DatasetBuilder():
         self.numValidation = numValidation
         self. seed_data = seed_data
         self.device = device
+
         
     def BuildDatasets(self, numSamples):
         # Train
@@ -19,6 +20,11 @@ class DatasetBuilder():
         return train_data, val_data
 
     def BuildValidation(self, numSamples, valAgents):
-        val_data = torch.load('saves/datasets/'+self.policy+str(valAgents)+'_valData_'+str(self.numValidation)+'_'+str(numSamples)+'_'+str(self.seed_data)+'.pth').to(self.device)
+        val_data = torch.load('saves/datasets/'+self.policy+str(int(valAgents))+'_valData_'+str(self.numValidation)+'_'+str(numSamples)+'_'+str(self.seed_data)+'.pth').to(self.device)
+        
+        return val_data
+    
+    def BuildTest(self, numSamples, testAgents):
+        val_data = torch.load('saves/datasets/'+self.policy+str(int(testAgents))+'_testData_'+str(self.numValidation)+'_'+str(numSamples)+'_'+str(self.seed_data)+'.pth').to(self.device)
         
         return val_data

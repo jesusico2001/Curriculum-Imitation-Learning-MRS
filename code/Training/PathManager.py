@@ -20,10 +20,17 @@ class PathManager():
         conf = self.trainConfig["teacher"]
 
         info = str(conf["type"]) + "/"
+        try:
+            info += str(conf["reward"]) + "Reward/"
+        except:
+            pass
         info += str(conf["max_difficulty"]) + "_"
-        
+        info += str(conf["difficulty_grouper"]) + "_"
+        info += str(conf["difficulty_resolution"]) + "_"
+
+        usedParams = ["type", "reward", "max_difficulty", "difficulty_grouper", "difficulty_resolution"]
         for param, value in conf.items():
-            if param != "type" and param != "max_difficulty":
+            if not (param in usedParams):
                 info += str(value) + "_"
         info = info[:-1] + "/"
 

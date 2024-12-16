@@ -11,27 +11,15 @@ class BabyStepsTeacher(TeacherAgent):
         self.interval_function = CuadraticFunction.ModelInterval(config["interval_policy"], config["interval_parameter"])
         self.increment_function = CuadraticFunction.ModelIncrement(config["increment_policy"], config["increment_parameter"])
         
-        self.difficulty = 5
-        self.epochNextIncrement = self.interval_function.compute(self.difficulty)
+        self.difficulty = 4
+        self.epochNextIncrement = 0
         self.old_task_quota = config["old_task_quota"]
+        
+        # Initialize distribution
+        self.updateDifficulties(0, torch.ones(self.nDifficulties), None)
 
-    def getDifficulties(self, batch_size):
-        nOldTasks = int(batch_size*self.old_task_quota)
-        nNewTasks = int(batch_size*(1-self.old_task_quota))
-        while(nOldTasks + nNewTasks < batch_size):
-            nNewTasks += 1
-
-        old_tasks_sizes = torch.randint(1, self.difficulty-1, [nOldTasks])
-        new_task_sizes = torch.full([nNewTasks], self.difficulty)
-        chosen_sizes  = torch.cat(( old_tasks_sizes, new_task_sizes))
-        return chosen_sizes
     
-    def getDifficultyDistribution(self):
-        distr = torch.ones(self.maxDifficulty) 
-        distr = distr / sum(distr)
-        return distr
-    
-    def updateDifficulties(self, epoch, losses, isValEpoch):
+    def updateGroupedDifficulties(self, epoch, losses, isValEpoch):
         if epoch >= self.epochNextIncrement and self.difficulty < self.maxDifficulty:
             # First Increase numSamples
             self.difficulty += self.increment_function.compute(self.difficulty)
@@ -41,6 +29,18 @@ class BabyStepsTeacher(TeacherAgent):
             # Then update next interval
             self.epochNextIncrement += self.interval_function.compute(self.difficulty)
 
+            # Set the distriubtion
+            fullres_difficulty_distr = torch.zeros(self.maxDifficulty) 
+            for i in range(self.difficulty-1):
+                fullres_difficulty_distr[i] = self.old_task_quota / (self.difficulty-1)
+            
+            fullres_difficulty_distr[self.difficulty-1] = 1 - self.old_task_quota
+
+            # Group diificulties to match resolution
+            self.difficulty_distr = torch.zeros(self.nDifficulties)
+            for fullres_difficulty, prob in enumerate(fullres_difficulty_distr):
+                self.difficulty_distr[int((fullres_difficulty-1)/self.difficultyResolution)] += prob
+                
 class CuadraticFunction():
     def __init__(self, a, b, c):
         self.a = a

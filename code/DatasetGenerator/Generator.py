@@ -48,14 +48,14 @@ def main(policy="FS", numTrain=20000, numVal=20000, numTests=20000, numSamples=5
     print("Real System built... - Type= ", type(realSys), "\n")
 
     # Build datasets
-    train_data = generateDataset("train", realSys, numAgents, numTrain, numSamples, time, step_size)
+    # train_data = generateDataset("train", realSys, numAgents, numTrain, numSamples, time, step_size)
     val_data = generateDataset("val", realSys, numAgents, numVal, numSamples, time, step_size)
-    test_data = generateDataset("test", realSys, numAgents, numTests, numSamples, time, step_size)
+    # test_data = generateDataset("test", realSys, numAgents, numTests, numSamples, time, step_size)
     
     # Store data
-    torch.save(train_data, 'saves/datasets/'+policy+str(numAgents)+'_trainData_'+str(numTrain)+'_'+str(numSamples)+'_'+str(seed)+'.pth')
+    # torch.save(train_data, 'saves/datasets/'+policy+str(numAgents)+'_trainData_'+str(numTrain)+'_'+str(numSamples)+'_'+str(seed)+'.pth')
     torch.save(val_data, 'saves/datasets/'+policy+str(numAgents)+'_valData_'+str(numVal)+'_'+str(numSamples)+'_'+str(seed)+'.pth')
-    torch.save(test_data, 'saves/datasets/'+policy+str(numAgents)+'_testData_'+str(numTests)+'_'+str(numSamples)+'_'+str(seed)+'.pth')
+    # torch.save(test_data, 'saves/datasets/'+policy+str(numAgents)+'_testData_'+str(numTests)+'_'+str(numSamples)+'_'+str(seed)+'.pth')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset generator for LEMURS')

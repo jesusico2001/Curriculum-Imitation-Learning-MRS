@@ -6,9 +6,13 @@ learn_system:
   depth: 3
 teacher: 
   max_difficulty: 50
+  difficulty_grouper: steps
+  difficulty_resolution: 10
   type: online
+  learning_rate: 0.001
+  reward: l2loss
 general:
-  epochs: 40000
+  epochs: 10000
   train_size: 20000
   val_size: 2000
   seed_data: 42
