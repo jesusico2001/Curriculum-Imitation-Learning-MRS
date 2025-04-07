@@ -78,6 +78,7 @@ def normalizeMetrics(metrics):
     scaled = 0.2 + normalized * (1 - 0.2)
 
     return scaled
+    
 def main(numAgents, evaluation_paths):
     eval_id = []
     eval_info = []

@@ -9,18 +9,18 @@ from Evaluation.trajectory_analysis import *
 class CheckpointValidator(EvalAgent):    
 
     def validateLossUniformDifficulty(self, numAgents):
-        oldNa = self.learn_system.na 
-        self.learn_system.na  = numAgents
+        oldNa = self.learn_system.task.numAgents 
+        self.learn_system.task.numAgents  = numAgents
 
         # Load dataset
-        valData = self.dataset_builder.BuildValidation(self.numSamples_dataset, numAgents)
+        valData = self.dataset_builder.BuildArbitraryNumAgents("val", numAgents, self.learn_system.return_noisy_obs)
         
         # Iterate all checkpoints computing losses
         epochs = torch.load(self.path_manager.getPathHistory()+"/val_epochs.pth")
         for epoch in epochs:
-            self.learn_system.load_state_dict(torch.load(self.path_manager.getPathCheckpoints()+"/epoch_"+str(epoch)+".pth", map_location=self.device))
+            self.load_checkpoint(epoch)
             with torch.no_grad():
-                self.validate(valData, self.validation_size)
+                self.validate(valData, self.validation_batch_size)
             self.learn_system.eval() # Ensure evaluation mode
             print("Epoch", epoch, "done.")
             print("====================")
@@ -34,7 +34,7 @@ class CheckpointValidator(EvalAgent):
         torch.cuda.empty_cache()
         self.history["loss_val_distr"] = []
         
-        self.learn_system.na = oldNa
+        self.learn_system.task.numAgents = oldNa
 
     # ==========================================
 
@@ -51,35 +51,34 @@ class CheckpointValidator(EvalAgent):
         torch.save(losses, self.path_manager.getPathHistory()+'/loss_val_'+str(self.numSamples_dataset)+"_"+str(numAgents)+'robots.pth')
 
 
-        
     def validateLossFixedDifficulty(self, difficulty, numAgents):
-        oldNa = self.learn_system.na 
-        self.learn_system.na  = numAgents
+        oldNa = self.learn_system.task.numAgents 
+        self.learn_system.task.numAgents  = numAgents
 
         # Load dataset
-        valData = self.dataset_builder.BuildValidation(self.numSamples_dataset, numAgents)
-        difficulties = torch.ones(self.validation_size, dtype=int) * difficulty
-        inputs_val, target_val, top_difficulty = self.buildInputsTargets(valData, self.validation_size, difficulties)
+        valData = self.dataset_builder.BuildArbitraryNumAgents("val", numAgents, self.learn_system.return_noisy_obs)
+        difficulties = torch.ones(self.validation_batch_size, dtype=int) * difficulty
+        inputs_val, target_val, top_difficulty = self.buildInputsTargets(valData, self.validation_batch_size, difficulties)
         
         losses = []
         epochs = torch.load(self.path_manager.getPathHistory()+"/val_epochs.pth")
         for epoch in epochs:
-            self.learn_system.load_state_dict(torch.load(self.path_manager.getPathCheckpoints()+"/epoch_"+str(epoch)+".pth", map_location=self.device))
+            self.load_checkpoint(epoch)
             with torch.no_grad():
                 loss_val = self.runEpochLoss(inputs_val, target_val, difficulties, top_difficulty)
             losses.append(loss_val)
             print("Epoch ", epoch, " validated. - L2:",float(loss_val))
 
-        self.learn_system.na = oldNa
+        self.learn_system.task.numAgents = oldNa
         return losses
 
     # ========================================
     def videoEvolution(self, numAgents):
-        oldNa = self.learn_system.na 
-        self.learn_system.na  = numAgents
+        oldNa = self.learn_system.task.numAgents 
+        self.learn_system.task.numAgents  = numAgents
         
         # Load dataset
-        valData = self.dataset_builder.BuildValidation(self.numSamples_dataset, numAgents)
+        valData = self.dataset_builder.BuildArbitraryNumAgents("val", numAgents, self.learn_system.return_noisy_obs)
         epochs = torch.load(self.path_manager.getPathHistory()+"/val_epochs.pth")
         nEpochs = epochs[-1]
         
@@ -102,4 +101,21 @@ class CheckpointValidator(EvalAgent):
         del ani
         print("Video generated successfully")
         
-        self.learn_system.na  = oldNa
+        self.learn_system.task.numAgents  = oldNa
+
+
+    EPOCHS_PER_FRAME = 500
+    def updateFrame(frame, myLearnSystem, initial_state, real_trajectory, nEpochs, maxNumSamples, 
+                    numAgents, device, simulation_time, step_size, path_checkpoints):
+        epoch_save = EPOCHS_PER_FRAME * (frame+1)
+        print("Frame "+str(frame)+": epoch= "+str(epoch_save))
+        try:
+            myLearnSystem.load_state_dict(torch.load(path_checkpoints+"/epoch_"+str(epoch_save)+".pth", map_location=device))
+            myLearnSystem.eval()
+            my_learned_trajectory = myLearnSystem.forward(initial_state.unsqueeze(dim=0).to(device), simulation_time, step_size).squeeze(dim=1)
+            
+            plt.clf()
+            plotFrame(my_learned_trajectory, real_trajectory, nEpochs[-1], epoch_save, maxNumSamples, numAgents)
+
+        except FileNotFoundError:
+            print("Error frame("+str(frame)+"): Save not found from epoch "+ str(epoch_save))

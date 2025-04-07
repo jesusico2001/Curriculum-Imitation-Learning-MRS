@@ -1,67 +1,99 @@
+import time, imageio
+from pathlib import Path
 from abc import ABC, abstractmethod
 from torch import nn, torch
 from torchdiffeq import odeint
-
+from Task.TaskBuilder import TaskBuilder
 class learnSystem(nn.Module, ABC):
 
-    def __init__(self, parameters):
+    def __init__(self, config):
         super().__init__()
-        self.device  = parameters["device"]
-        self.na      = parameters['na']
-        self.controlPolicy = parameters["control_policy"]
+        self.device = torch.device(config["general"]["device"] if torch.cuda.is_available() else 'cpu')
+
+        self.open_loop = config["learn_system"]["open_loop"]
+        self.learning_rate = config["learn_system"]["learning_rate"]
+        self.task = TaskBuilder(config)
+        self.return_noisy_obs = True
+
+        if(self.open_loop):
+            # if not hasattr(self.task, "RL_env"):
+            #     print("Error (LearnSystem): In order to simulate open-loop dynamics",
+            #         type(self.task),
+            #         "should provide a \"RL_env\".")
+            #     exit()
+                
+            # if not (hasattr(self.task, "computeActions") or
+            #         callable(getattr(self.task, "computeActions"))):
+            #     print("Error (LearnSystem): In order to simulate open-loop dynamics",
+            #         type(self.task),
+            #         "should provide the method \"computeActions\".")
+            #     exit()
+            pass
+        else:
+            if not hasattr(self.task, "simulation_step"):
+                print("Error (LearnSystem): In order to manage closed-loop dynamics",
+                    type(self.task),
+                    "requires the attribute \"simulation_step\".")
+                exit()
 
     @abstractmethod
     def flocking_dynamics(self, t, inputs):
        pass
     
-    def leader_dynamics(self, t, inputs):
-        return inputs[:, 6 * self.na:], torch.zeros((inputs.shape[0], 2 * self.na), device=self.device)
+    def forward(self, inputs, nFrames=10):
+        if(self.open_loop):
+            outputs = self.solve_open_loop(inputs, nFrames)
+        else:
+            time = nFrames * self.task.simulation_step
+            simulation_time = torch.linspace(0, time - self.task.simulation_step, nFrames)
 
-    def overall_dynamics(self, t, inputs):
-        dd = self.leader_dynamics(t, inputs)
-        da = self.flocking_dynamics(t, inputs)
-        return torch.cat((da[0] + dd[0], da[1] + dd[1], dd[0], dd[1]), dim=1)
-
-    def forward(self, inputs, simulation_time, step_size):
-        outputs_2 = odeint(self.overall_dynamics, inputs, simulation_time.to(self.device), method='euler', options={'step_size': step_size})
-        return outputs_2
-  
-
-    # ===============
-    # Private methods
-    # ===============
-
-    def getStateDiffs(self, inputs):
-        inputs_d         = (inputs[:, :4 * self.na] - inputs[:, 4 * self.na:]) #difference between agents and leaders
-
-        state_d          = torch.zeros((inputs.shape[0], self.na, 4), device=self.device) #(nInputs x nAgents x 4)
-        state_d[:, :, 0] = inputs_d[:, 0:2 * self.na:2] #positions_dif(1)
-        state_d[:, :, 1] = inputs_d[:, 1:2 * self.na:2] #positions_dif(2)
-        state_d[:, :, 2] = inputs_d[:, 2 * self.na + 0::2] #movement_dif(1)
-        state_d[:, :, 3] = inputs_d[:, 2 * self.na + 1::2] #movement_dif(2)
-
-        del inputs_d
-        return state_d
+            outputs = odeint(self.closed_loop_dynamics, inputs, simulation_time.to(self.device), 
+                            method='euler', options={'step_size': self.task.simulation_step})
+        return outputs
     
-    def getRelativeStates(self, inputs):
-        # Obtain relative states
-        inputs_l         = inputs[:, :4 * self.na] #eliminates leaders
+    # This discretization assumes that the only dynamic elements  
+    # in the feature vectore are robot states
+    def closed_loop_dynamics(self, t, inputs):
+        robot_dynamics = self.flocking_dynamics(t, inputs)
+        # print("pos_dyn", robot_dynamics[0].shape)
+        # print("vel_dyn", robot_dynamics[1].shape)
+        # input()
 
-        pos = inputs_l[:, :2 * self.na].reshape(inputs_l.shape[0], -1, 2)
-        vel = inputs_l[:, 2 * self.na:6 * self.na].reshape(inputs_l.shape[0], -1, 2)
-        return pos, vel
+        global_dynamics = torch.zeros(inputs.shape).to(self.device)
+        global_dynamics[:,self.task.feature_index["robot_positions"]] = robot_dynamics[0]
+        global_dynamics[:,self.task.feature_index["robot_velocities"]] = robot_dynamics[1]
+        return global_dynamics
+    
+    def solve_open_loop(self, inputs, nFrames):
+        env = self.task.setupEnvs(inputs)
 
-    # def getRelativeStates(self, inputs):
-    #     # Obtain relative states
-    #     inputs_l         = inputs[:, :4 * self.na] #eliminates leaders
+        trajectories = torch.zeros([nFrames, inputs.shape[0], inputs.shape[1]]).to(self.device)
+        trajectories[0, :, :] = inputs
+        inputs_frame = inputs
+        for i in range(1,nFrames):
+            # print("Frame ", i)
+            # env.render()
+            
+            if hasattr(self.task, "reduceObservability") and callable(getattr(self.task, "reduceObservability")):
+                inputs_frame = self.task.reduceObservability(inputs_frame)
+                
+            closed_loop_dynamics = torch.cat(self.flocking_dynamics(0, inputs_frame), dim=1)
+            actions = self.task.computeActions(closed_loop_dynamics)
 
-    #     pos1 = inputs_l[:, :2 * self.na].reshape(inputs_l.shape[0], -1, 2).repeat(1, self.na, 1) # positions repeated (p1p2p3 p1p2p3)
-    #     pos2 = torch.kron(inputs_l[:, :2 * self.na].reshape(inputs_l.shape[0], -1, 2), torch.ones((1, self.na, 1), device=self.device)) # positions repeated (p1p1 p2p2 p3p3)
-    #     pos  = (pos1 - pos2).reshape(inputs_l.shape[0] * self.na, -1) #relative positions to every other agent
+            obs, rews, done, truncated, info = env.step(actions)
+            inputs_frame_noiseLess = self.task.reshapeObservation(obs)
+            inputs_frame = self.task.addNoise(inputs_frame_noiseLess)
 
-    #     vel1 = inputs_l[:, 2 * self.na:6 * self.na].reshape(inputs_l.shape[0], -1, 2).repeat(1, self.na, 1)
-    #     vel2 = torch.kron(inputs_l[:, 2 * self.na:4 * self.na].reshape(inputs_l.shape[0], -1, 2), torch.ones((1, self.na, 1), device=self.device))
-    #     vel  = (vel1 - vel2).reshape(inputs_l.shape[0] * self.na, -1) #relative velocities to every other agent
 
-    #     del pos1, pos2, vel1, vel2
-    #     return pos, vel
+            if self.return_noisy_obs:
+                trajectories[i, :, :] = inputs_frame
+            else:
+                trajectories[i, :, :] = inputs_frame_noiseLess
+
+        return trajectories
+    
+    def next_filename(self, base_name, extension):
+        index = 0
+        while Path(f"{base_name}_{index}{extension}").exists():
+            index += 1
+        return f"{base_name}_{index}{extension}"

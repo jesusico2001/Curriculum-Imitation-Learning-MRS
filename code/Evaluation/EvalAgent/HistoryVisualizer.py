@@ -33,6 +33,27 @@ class HistoryVisualizer(EvalAgent):
         plt.show()
         plt.close()
 
+    def plotLossMaxDifficulty(self):
+        plt.figure(figsize=(10,6))
+        
+        epochs = self.__loadFromHistory__("val_epochs")
+
+        loss_val = self.__loadFromHistory__("loss_val_"+str((self.learn_system.task.episode_difficulty))+"_"+str(int( self.learn_system.task.numAgents))+"robots")
+        loss_val_formatted = [t.cpu().tolist() for t in loss_val]
+
+        plt.plot(epochs, loss_val_formatted, linestyle='solid', alpha=1, color="green", label="Validation")
+
+        plt.title('Episode Loss Evolution | Difficulty:'+str(self.learn_system.task.episode_difficulty), fontsize=25)
+        plt.yscale('log')
+        plt.xlabel('Iterations', fontsize=22)
+        plt.ylabel('Error', fontsize=22)
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
+        plt.legend(fontsize=20)
+        plt.grid(True)
+        # plt.show()
+        plt.savefig(self.path_manager.getPathEvaluation()+"/val_loss_max_difficulty.png")
+        plt.close()
 
     def plotTrainValidationLosses(self):
         plt.figure(figsize=(10,6))
@@ -42,7 +63,7 @@ class HistoryVisualizer(EvalAgent):
         loss_train = self.__loadFromHistory__("loss_train")
         loss_train_formatted = [t.cpu().tolist() for t in loss_train]
 
-        loss_val = self.__loadFromHistory__("loss_val_"+str((self.teacher.maxDifficulty))+"_"+str(int(self.learn_system.na))+"robots")
+        loss_val = self.__loadFromHistory__("loss_val_"+str((self.teacher.maxDifficulty))+"_"+str(int( self.learn_system.task.numAgents))+"robots")
         loss_val_formatted = [t.cpu().tolist() for t in loss_val]
 
 

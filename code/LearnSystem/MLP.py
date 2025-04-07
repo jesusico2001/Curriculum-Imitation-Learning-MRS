@@ -8,7 +8,6 @@ class MLP(learnSystem):
 
     def __init__(self, parameters):
         super().__init__(parameters)
-        self.learning_rate = 1e-3
 
         self.nLayers = int(parameters["nAttLayers"])
         self.d = self.controlPolicy.input_size * self.na #input dimensions

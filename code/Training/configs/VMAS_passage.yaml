@@ -1,0 +1,29 @@
+task:
+  type: passage
+  lib: VMAS
+  num_agents: 5
+  episode_difficulty: 150
+learn_system:
+  type: LEMURS
+  depth: 3
+  open_loop: true
+  learning_rate: 0.005
+teacher: 
+  max_difficulty: 50
+  difficulty_grouper: steps
+  difficulty_resolution: 10
+  type: babysteps
+  interval_policy: fixed
+  interval_parameter: 200
+  increment_policy: fixed
+  increment_parameter: 1
+  old_task_quota: 0.3
+general:
+  epochs: 5000
+  train_size: 5000
+  val_size: 1000
+  test_size: 1000
+  seed_data: 42
+  seed_train: 42
+  early_stopping: false
+  device: cuda:0

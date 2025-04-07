@@ -1,0 +1,10 @@
+teacher: 
+  max_difficulty: 40
+  difficulty_grouper: steps
+  difficulty_resolution: 5
+  type: babysteps
+  interval_policy: fixed
+  interval_parameter: 0
+  increment_policy: fixed
+  increment_parameter: 0
+  old_task_quota: 0

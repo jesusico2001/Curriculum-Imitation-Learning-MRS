@@ -1,7 +1,31 @@
 class PathManager():
     def __init__(self, config):
         self.trainConfig = config
+    
+    def getPathDatasets(self):
+        return "saves/datasets/" + self.taskInfo()
+
+    def getDatasetFilename(self, split, noisyObs=True):
+        conf = self.trainConfig["general"]
+        seed = conf["seed_data"]
         
+        if split=="train":
+            size = conf["train_size"]
+        elif split=="val":
+            size = conf["val_size"]
+        elif split=="test":
+            size = conf["test_size"]
+        else:
+            print("ERROR (getDatasetFilename): \""+ split + "\" is not a valid parameter.")
+            exit(0)
+
+        name = split+'_'+str(size)+'_'+str(seed)
+        if not noisyObs:
+            name += "_noiseless"
+
+        return name+'.pth'
+        
+    # ===========================================
     def getPathCheckpoints(self):
         return "saves/checkpoints/" + self.trainInfo()
     
@@ -12,7 +36,7 @@ class PathManager():
         return "saves/evaluation/" + self.trainInfo()
 
     def trainInfo(self):
-        train_info = self.teacherInfo() + self.studentInfo() + self.generalInfo() 
+        train_info = self.teacherInfo() + self.studentInfo() + self.taskInfo() + self.generalTrainInfo() 
         
         return train_info
     
@@ -40,13 +64,27 @@ class PathManager():
         conf = self.trainConfig["learn_system"]
 
         info = str(conf["type"]) + "_"
-        info += str(conf["num_agents"]) + "_"
-        info += str(conf["policy"]) + "_"
-        info += str(conf["depth"]) + "/"
-
+        
+        usedParams = ["type"]
+        for param, value in conf.items():
+            if not (param in usedParams):
+                info += str(value) + "_"
+        info = info[:-1] + "/"
         return info
     
-    def generalInfo(self):
+    def taskInfo(self):
+        conf = self.trainConfig["task"]
+        
+        info = str(conf["type"]) + "_" + conf["lib"] + "/"
+        
+        usedParams = ["type", "lib"]
+        for param, value in conf.items():
+            if not (param in usedParams):
+                info += str(value) + "_"
+        info = info[:-1] + "/"
+        return info
+
+    def generalTrainInfo(self):
         conf = self.trainConfig["general"]
 
         info = str(conf["epochs"]) + "_"

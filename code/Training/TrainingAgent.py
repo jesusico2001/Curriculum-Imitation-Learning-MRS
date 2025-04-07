@@ -7,6 +7,9 @@ from Training.Teacher.TeacherBuilder import TeacherBuilder
 from LearnSystem import LearnSystemBuilder
 from Training.DatasetBuilder import DatasetBuilder
 
+import torchlens
+from functools import partial
+
 VAL_PERIOD = 50
 class TrainingAgent():
 
@@ -14,6 +17,7 @@ class TrainingAgent():
         if isinstance(path_config, str):
             with open(path_config, "r") as file:
                 config = yaml.safe_load(file)
+                self.config = config
             print("Config loaded...")
 
         if config_changes:
@@ -32,13 +36,7 @@ class TrainingAgent():
         self.path_manager = PathManager(config)
 
         # Student agent
-        policy = config["learn_system"]["policy"]
-        numAgents = config["learn_system"]["num_agents"]
-        nAttLayers = config["learn_system"]["depth"]
-        architecture = config["learn_system"]["type"]
-        ls_parameters = LearnSystemBuilder.buildParameters(policy, numAgents, nAttLayers)
-        self.learn_system = LearnSystemBuilder.buildLearnSystem(architecture, ls_parameters) 
-        
+        self.learn_system = LearnSystemBuilder.buildLearnSystem(config) 
         print("Student created...")
 
         # Student optimizer
@@ -50,13 +48,9 @@ class TrainingAgent():
         print("Teacher created...")
 
         # Dataset manager
-        numTrain = config["general"]["train_size"]
-        numVal = config["general"]["val_size"]
-        seed_data = config["general"]["seed_data"]
-        self.dataset_builder = DatasetBuilder(policy, numAgents, numTrain, numVal, seed_data, ls_parameters["device"])    
+        self.dataset_builder = DatasetBuilder(config, self.learn_system.device)
 
-
-        self.device = ls_parameters["device"]
+        self.device = self.learn_system.device
         self.epochs = config["general"]["epochs"]
         self.perform_early_stopping = config["general"]["early_stopping"]
         self.history = {
@@ -65,12 +59,11 @@ class TrainingAgent():
             "difficulty_distr" : [],
             "val_epochs" : []
         }
-        self.step_size       = 0.04
-        self.numSamples_dataset = 250
+        self.numSamples_dataset = config["task"]["episode_difficulty"]
 
         # Batch sizes
-        self.train_size      = 100
-        self.validation_size      = 100 * self.teacher.nDifficulties
+        self.train_batch_size      = 100
+        self.validation_batch_size = 40 * self.teacher.nDifficulties
 
 
     def checkExistingTraining(self):
@@ -88,34 +81,34 @@ class TrainingAgent():
 
     def trainingLoop(self):
         self.checkExistingTraining()
+        # torch.autograd.set_detect_anomaly(True)
 
         # Datasets
         train_data, val_data = self.dataset_builder.BuildDatasets(self.numSamples_dataset)
 
         nextEpochVal = 0
         for epoch in range(0, self.epochs):
-
             # Run and compute loss
-            difficulties = self.teacher.getDifficulties(self.train_size)
-            inputs_train, target_train, top_difficulty = self.buildInputsTargets(train_data, self.train_size, difficulties)
+            difficulties = self.teacher.getDifficulties(self.train_batch_size)
+            inputs_train, target_train, top_difficulty = self.buildInputsTargets(train_data, self.train_batch_size, difficulties)
+            
             loss_train = self.runEpochLoss(inputs_train, target_train, difficulties, top_difficulty)
 
             # Update weights
-            self.optimizer.zero_grad()
+            self.optimizer.zero_grad()            
             loss_train.backward()
             self.optimizer.step()
-
+         
             # Validate
-            isValEpoch = False
-            if epoch == nextEpochVal  or epoch == self.epochs-1 :
-                isValEpoch = True  
+            isValEpoch = epoch == nextEpochVal  or epoch == self.epochs-1 
+            if isValEpoch:
                 nextEpochVal += VAL_PERIOD
                 
                 print('Epoch = %d' % (epoch)  ) 
                 print('- - - - - - - - -')
                 print("|Training|\n  --Loss = ", loss_train.detach().cpu().numpy(), "\n  --Avg. Difficulty = ", difficulties.detach().cpu().numpy().mean())
 
-                student_loss_distr = self.validate(val_data, self.validation_size)
+                student_loss_distr = self.validate(val_data, self.validation_batch_size)
                 print('===============================================\n')
             
                 # Store checkpoint 
@@ -134,73 +127,83 @@ class TrainingAgent():
 
         self.saveHistory()     
         return
-
-    def validate(self, val_data, validation_size):
-        # Build targets and validate with maxNumSamples (normalized Loss)          
-        difficulties = self.teacher.getValidationDifficulties(validation_size)
-        inputs_val, target_val, top_difficulty = self.buildInputsTargets(val_data, validation_size, difficulties)
-        val_loss_distr, avg_loss = self.valEpoch_loss_distr(inputs_val, target_val, difficulties, top_difficulty)
-
-        self.history["loss_val_distr"].append(self.teacher.transformValLoss(val_loss_distr))
-        print("|Validation|\n  --Loss = ", avg_loss, "\n  --Avg. Difficulty = ", difficulties.detach().cpu().numpy().mean())
-        # print("  --Loss distr. = ", val_loss_distr)
-        return val_loss_distr
     
     def buildInputsTargets(self, trajectories, batch_size, difficulties):
+        # print("trajectories", trajectories.shape)
+
         # Select batch
-        chosen_batch  = torch.randperm(trajectories.size(1))[:batch_size]
+        chosen_batch  = torch.arange(0,batch_size) # debug
+
+        # chosen_batch  = torch.randperm(trajectories.size(1))[:batch_size]
+        self.chosen_batch= chosen_batch # debug
+
         batch = trajectories[:,chosen_batch,:]
 
         # Select initial states for traj. of numSamples
         top_difficulty = max(difficulties)
         realNS = trajectories.size()[0]
         chosen_initial_state  = torch.tensor([torch.randint(0, max(1, int(realNS-k)), [1]) for k in difficulties])
+
         chosen_states = chosen_initial_state.unsqueeze(1) + torch.arange(top_difficulty)
         chosen_states = [row[:size] for row, size in zip(chosen_states, difficulties)]
 
         # Build uniform unbiased batch
-        numAgents = int(trajectories.size(2) / 8)
-        inputs = torch.zeros([batch_size, 8*numAgents]).to(self.device)
+        numAgents = self.learn_system.task.numAgents
+        inputs = torch.zeros([batch_size, batch.shape[2]]).to(self.device)
         targets = torch.zeros([top_difficulty, batch_size, 4*numAgents]).to(self.device)
-        
+        batch_states = self.learn_system.task.getRobotStates(batch)
         for i in range(batch_size):
             inputs[i, :] = batch[chosen_initial_state[i], i, :]
-            targets[:difficulties[i], i, :] = batch[chosen_states[i], i, :4*numAgents]
+            targets[:difficulties[i], i, :] = batch_states[chosen_states[i], i, :]
         
         return inputs, targets, top_difficulty
 
     def runEpochLoss(self, inputs, target, difficulties, max_difficulty):
         # Run epoch
-        time            = self.step_size * max_difficulty
-        simulation_time = torch.linspace(0, time - self.step_size, max_difficulty)
+        output = self.learn_system.forward(inputs, max_difficulty)
+        assert torch.isfinite(output).all()
 
-        output = self.learn_system.forward(inputs, simulation_time, self.step_size)
-        
         # Mask lower difficulties with 0's at the end
         for i, ns in enumerate(difficulties):
             output[ns:,i,:] = torch.zeros([max_difficulty-ns, output.shape[2]])    
 
         # Compute loss
-        L = self.L2_loss(output[:, :, :4 * self.learn_system.na], target, difficulties)
+        L = self.L2_loss_train(self.learn_system.task.getRobotStates(output), target, difficulties)
         return L
 
+    def L2_loss_train(self, u, v, ns_distr):
+        sumErrors = torch.sum((u - v).pow(2)) 
+        numComparedValues = (torch.sum(ns_distr) * u.shape[2])
+        return sumErrors / numComparedValues
+    
+    # ============
+    # |Validation|
+    # ============
+    def validate(self, val_data, validation_size):
+        # Build targets and validate with maxNumSamples (normalized Loss)          
+        difficulties = self.teacher.getValidationDifficulties(validation_size)
+        inputs_val, target_val, top_difficulty = self.buildInputsTargets(val_data, validation_size, difficulties)
+        val_loss_distr, avg_loss = self.validation_loss_distr(inputs_val, target_val, difficulties, top_difficulty)
 
-    def valEpoch_loss_distr(self, inputs_val, target_val, difficulties, max_difficulty):
-        self.learn_system.eval()                 # Set evaluation mode
+        self.history["loss_val_distr"].append(self.teacher.transformValLoss(val_loss_distr))
+        print("|Validation|\n  --Loss = ", avg_loss, "\n  --Avg. Difficulty = ", difficulties.detach().cpu().numpy().mean())
+        # print("  --Loss distr. = ", val_loss_distr)
+        return val_loss_distr
+    
+    def validation_loss_distr(self, inputs_val, target_val, difficulties, max_difficulty):
+        # Set evaluation mode
+        self.learn_system.eval()                 
         
         # Compute trajectories
-        time            = self.step_size * max_difficulty
-        simulation_time = torch.linspace(0, time - self.step_size, max_difficulty)
         with torch.no_grad():
-            output = self.learn_system.forward(inputs_val, simulation_time, self.step_size)
+            output = self.learn_system.forward(inputs_val, max_difficulty)
 
         # Mask lower difficulties with 0's at the end
-        # TODO: Fix masking, now we mask everything with the easiest difficulty
         for i, ns in enumerate(difficulties):
             output[ns:,i,:] = torch.zeros([max_difficulty-ns, output.shape[2]])    
 
         # Raw losses
-        losses = (output[:, :, :4 * self.learn_system.na] - target_val).pow(2)
+        losses = (self.learn_system.task.getRobotStates(output) - target_val).pow(2)
         losses = losses.sum(dim=(0,2)) / target_val.shape[2]
 
         # Sum of losses for each difficulty
@@ -219,16 +222,13 @@ class TrainingAgent():
         # Average losses (not consdering unsampled difficulties)
         avg_loss = loss_distr.sum() / torch.count_nonzero(difficulty_count)
 
-        del difficulty_count, loss_accumulated, losses, output
+        # Go back to training mode
+        self.learn_system.train()  
 
-        self.learn_system.train()                # Go back to training mode
+        del difficulty_count, loss_accumulated, losses, output
     
         return loss_distr.detach().cpu().numpy(), avg_loss.detach().cpu().numpy()
     
-    def L2_loss(self, u, v, ns_distr):
-        sumErrors = torch.sum((u - v).pow(2)) 
-        numComparedValues = (torch.sum(ns_distr) * u.shape[2])
-        return sumErrors / numComparedValues
     
     def saveHistory(self):
         path = self.path_manager.getPathHistory()

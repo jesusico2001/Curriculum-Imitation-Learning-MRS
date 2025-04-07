@@ -72,7 +72,7 @@ class CuadraticFunction():
         if policy == "fixed":
             return CuadraticFunction.modelConstant(parameter)
         elif policy == "linear":
-            return CuadraticFunction.modelLinear(MIN_INTERVAL, parameter)
+            return CuadraticFunction.modelLinear(parameter[0], parameter[1])
         elif policy == "modulated":
             return CuadraticFunction.modelLinearModulated(MIN_INTERVAL, parameter)
         else:
@@ -83,7 +83,7 @@ class CuadraticFunction():
         if policy == "fixed":
             return CuadraticFunction.modelConstant(parameter)
         elif policy == "linear":
-            return CuadraticFunction.modelLinear(MIN_INCREMENT, parameter)
+            return CuadraticFunction.modelLinear(parameter[0], parameter[1])
         elif policy == "modulated":
             return CuadraticFunction.modelLinearModulated(MIN_INCREMENT, parameter)
         else:

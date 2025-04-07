@@ -55,9 +55,8 @@ class AttentionModule(nn.Module, ABC):
             
             o = torch.bmm(self.activation_soft(torch.bmm(Q, K) / torch.sqrt(numNeighbors)).to(torch.float32), V).transpose(1, 2)
             input = self.activation_swish(torch.bmm(self.weights_o[layer].unsqueeze(dim=0).repeat(x.shape[0], 1, 1), o))
-            
+
             # Remask to recreate the perception bias
-            
             # self.remask_bias = False #TODO: NO TE OLVIDES DE QUITARLO
             
             if self.remask_bias and layer != self.nLayers-1:
