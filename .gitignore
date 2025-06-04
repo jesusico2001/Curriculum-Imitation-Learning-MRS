@@ -2,6 +2,7 @@
 saves_old
 old_evaluation_results
 code/saves/*
+code/Evaluation/Tests/*/results/*
 code/*.gif
 code/scripts
 *.zip
