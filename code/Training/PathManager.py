@@ -3,9 +3,9 @@ class PathManager():
         self.trainConfig = config
     
     def getPathDatasets(self):
-        return "saves/datasets/" + self.taskInfo()
+        return "saves/datasets/" + self.taskInfo(True)
 
-    def getDatasetFilename(self, split, noisyObs=True):
+    def getDatasetFilename(self, split, data="", noisy=True):
         conf = self.trainConfig["general"]
         seed = conf["seed_data"]
         
@@ -20,7 +20,12 @@ class PathManager():
             exit(0)
 
         name = split+'_'+str(size)+'_'+str(seed)
-        if not noisyObs:
+        if data=="actions":
+            name = "actions_" + name
+        elif data=="rewards":
+            name = "rewards_" + name
+
+        if not noisy:
             name += "_noiseless"
 
         return name+'.pth'
@@ -36,7 +41,7 @@ class PathManager():
         return "saves/evaluation/" + self.trainInfo()
 
     def trainInfo(self):
-        train_info = self.teacherInfo() + self.studentInfo() + self.taskInfo() + self.generalTrainInfo() 
+        train_info = self.teacherInfo() + self.studentInfo() + self.taskInfo(False) + self.generalTrainInfo() 
         
         return train_info
     
@@ -72,12 +77,16 @@ class PathManager():
         info = info[:-1] + "/"
         return info
     
-    def taskInfo(self):
+    def taskInfo(self, used_for_dataset=False):
         conf = self.trainConfig["task"]
         
         info = str(conf["type"]) + "_" + conf["lib"] + "/"
         
         usedParams = ["type", "lib"]
+        if used_for_dataset:
+            usedParams.append("robot_obs_noise")
+            usedParams.append("action_noise_factor")
+
         for param, value in conf.items():
             if not (param in usedParams):
                 info += str(value) + "_"

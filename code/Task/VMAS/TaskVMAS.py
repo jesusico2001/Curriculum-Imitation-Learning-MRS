@@ -17,11 +17,10 @@ class TaskVMAS(Task):
         self.vmas_scenario =  config["task"]["type"] 
         self.__build_real_dynamics()
         
-    
-    @abstractmethod
-    def randomInitialState(self):
-        pass
+    def getVMASConfig(self, expert_robots=False):
+        return {}
 
+    
     def buildFeatureIndex(self):
         pos_idx = []
         vel_idx = []
@@ -68,10 +67,7 @@ class TaskVMAS(Task):
         real_dyn = torch.bmm(J_sys - R_sys, dHdx_sys)
 
         action_batch = torch.bmm(F_sys_pinv, learned_dynamics.unsqueeze(2) - real_dyn).reshape(batch_size, na, self.action_dim_per_agent)
-        action = []
-        for i in range(na):
-            action.append(action_batch[:,i,:])
-        return action
+        return action_batch
     
     def __build_real_dynamics(self):
         na = self.numAgents
@@ -110,6 +106,7 @@ class TaskVMAS(Task):
 
     def setupEnvs(self, inputs):
         num_envs = inputs.shape[0]
+        env_kwargs = self.getVMASConfig()
 
         self.env = make_env(
             scenario= self.vmas_scenario,
@@ -121,7 +118,8 @@ class TaskVMAS(Task):
             terminated_truncated=True,
             # Environment specific variables
             n_agents=self.numAgents,
-            max_steps = self.episode_difficulty-1
+            max_steps = self.episode_difficulty-1,
+            **env_kwargs
         )
 
         for env_idx in range(self.env.num_envs):
@@ -130,7 +128,7 @@ class TaskVMAS(Task):
     
     # Returns all zeros. Implement your own in 
     # the inherited class to set 
-    def randomInitialState(self):
+    def randomInitialState(self, batch_size=1):
         i = self.agent_input_size
         na = self.numAgents
         obs = []
@@ -148,3 +146,4 @@ class TaskVMAS(Task):
                 frame = env.render(mode="rgb_array")
                 frames.append(frame)
             return frames
+    

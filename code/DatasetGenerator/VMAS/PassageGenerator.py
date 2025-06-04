@@ -1,24 +1,7 @@
-from abc import abstractmethod
 from collections import namedtuple
 
-import time, os, re, shutil
 from DatasetGenerator.VMAS.VMASGenerator import VMASGenerator
 import torch
-import gymnasium, vmas
-from gym.spaces import Tuple, Box
-
-from benchmarl.models.mlp import MlpConfig
-from benchmarl.experiment import Experiment, ExperimentConfig
-from benchmarl.environments import VmasTask
-from benchmarl.algorithms import MappoConfig
-
-from benchmarl.hydra_config import reload_experiment_from_file
-
-BENCHMARL_task_map = {
-    "navigation": VmasTask.NAVIGATION, 
-    "balance": VmasTask.BALANCE,
-    "passage": VmasTask.PASSAGE,
-}
 
 class PassageGenerator(VMASGenerator):
     def __init__(self, config):

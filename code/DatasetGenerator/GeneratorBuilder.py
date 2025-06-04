@@ -7,6 +7,7 @@ from DatasetGenerator.Generator import Generator
 from DatasetGenerator.RealSystem.RealSystemGenerator import RealSystemGenerator
 from DatasetGenerator.VMAS.VMASGenerator import VMASGenerator
 from DatasetGenerator.VMAS.PassageGenerator import PassageGenerator
+from DatasetGenerator.VMAS.MallGenerator import MallGenerator
 import yaml
 
 class Generators(Enum):
@@ -33,7 +34,9 @@ def GeneratorBuilder(path_config, config_changes):
     if config["task"]["lib"] == Generators.vmas.value:
         if config["task"]["type"] == "passage":
             return PassageGenerator(config)
-        
+        if config["task"]["type"] == "mall":
+            return MallGenerator(config)
+
         return VMASGenerator(config)
     else:
         print("Unknown task library: ", config["task"]["lib"])

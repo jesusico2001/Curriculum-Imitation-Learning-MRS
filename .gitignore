@@ -1,7 +1,9 @@
 #Evaluation results
-code/evaluation/results/*
-code/scripts/tests/radar_graphs/*
-tmp_results
+saves_old/*
+old_evaluation_results/*
+code/saves/*
+code/*.gif
+code/scripts
 *.zip
 
 # Python

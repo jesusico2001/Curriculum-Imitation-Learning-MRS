@@ -22,13 +22,15 @@ for filename in ["noCL_easy.yaml",]:
     with open(teachers_path+filename, "r") as file:
         config_changes = yaml.safe_load(file)
     
-    config = "Training/configs/VMAS_balance.yaml"
-    t_agent = TrainingAgent(config, config_changes)
+    # config = "Training/configs/VMAS_balance.yaml"
+    config = "/mnt/hdd/JesusRoche/Curriculum-Imitation-Learning-MRS/code/Evaluation/Tests/2_nAgents_battery_noisy_navigation/configs/VMAS_navigation.yaml"
+    # t_agent = TrainingAgent(config, config_changes)
+    t_agent = TrainingAgent(config, {"task.num_agents": 10})
     model = t_agent.learn_system
     model.eval()
 
 
-    trajectories  = t_agent.dataset_builder.BuildArbitraryNumAgents("test", model.task.numAgents)
+    trajectories  = t_agent.dataset_builder.BuildArbitraryNumAgents("test", model.task.numAgents, False)
     path_save = t_agent.path_manager.getPathDatasets()+"qualitative/"
     os.makedirs(path_save, exist_ok=True)
     for i in range(5):

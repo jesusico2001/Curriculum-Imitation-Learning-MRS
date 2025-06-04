@@ -11,9 +11,10 @@ class learnSystem(nn.Module, ABC):
         self.device = torch.device(config["general"]["device"] if torch.cuda.is_available() else 'cpu')
 
         self.open_loop = config["learn_system"]["open_loop"]
+        self.action_loss = config["learn_system"]["action_loss"]
         self.learning_rate = config["learn_system"]["learning_rate"]
         self.task = TaskBuilder(config)
-        self.return_noisy_obs = True
+        self.return_noisy_obs = False
 
         if(self.open_loop):
             # if not hasattr(self.task, "RL_env"):
@@ -42,14 +43,16 @@ class learnSystem(nn.Module, ABC):
     
     def forward(self, inputs, nFrames=10):
         if(self.open_loop):
-            outputs = self.solve_open_loop(inputs, nFrames)
+            trajectories, actions, rewards = self.solve_open_loop(inputs, nFrames)
         else:
             time = nFrames * self.task.simulation_step
             simulation_time = torch.linspace(0, time - self.task.simulation_step, nFrames)
 
-            outputs = odeint(self.closed_loop_dynamics, inputs, simulation_time.to(self.device), 
+            trajectories = odeint(self.closed_loop_dynamics, inputs, simulation_time.to(self.device), 
                             method='euler', options={'step_size': self.task.simulation_step})
-        return outputs
+            actions = None
+            rewards = None
+        return trajectories, actions, rewards
     
     # This discretization assumes that the only dynamic elements  
     # in the feature vectore are robot states
@@ -68,29 +71,54 @@ class learnSystem(nn.Module, ABC):
         env = self.task.setupEnvs(inputs)
 
         trajectories = torch.zeros([nFrames, inputs.shape[0], inputs.shape[1]]).to(self.device)
+        action_traj = torch.zeros([nFrames, inputs.shape[0], self.task.numAgents*self.task.action_dim_per_agent]).to(self.device)
+        rewards = torch.zeros([nFrames, inputs.shape[0], self.task.numAgents]).to(self.device)
+
         trajectories[0, :, :] = inputs
-        inputs_frame = inputs
+        inputs_frame_noiseLess = inputs
         for i in range(1,nFrames):
             # print("Frame ", i)
             # env.render()
-            
+
+            # Filter data: Add noise and reduce observability
+            inputs_frame = self.task.addNoise(inputs_frame_noiseLess)
             if hasattr(self.task, "reduceObservability") and callable(getattr(self.task, "reduceObservability")):
                 inputs_frame = self.task.reduceObservability(inputs_frame)
-                
+
+            # Compute actions    
             closed_loop_dynamics = torch.cat(self.flocking_dynamics(0, inputs_frame), dim=1)
-            actions = self.task.computeActions(closed_loop_dynamics)
+            actions_noiseless = self.task.computeActions(closed_loop_dynamics)
+            actions = self.task.addNoise(actions_noiseless, True)
+            act_list = []
+            for j in range(self.task.numAgents):
+                act_list.append(actions[:,j,:])
 
-            obs, rews, done, truncated, info = env.step(actions)
+            # Step
+            obs, rews, done, truncated, info = env.step(act_list)
+            rewards[i,:,:] = torch.stack(rews).transpose(0,1)
             inputs_frame_noiseLess = self.task.reshapeObservation(obs)
-            inputs_frame = self.task.addNoise(inputs_frame_noiseLess)
-
 
             if self.return_noisy_obs:
                 trajectories[i, :, :] = inputs_frame
+                action_traj[i-1, :, :] = actions.reshape(-1,self.task.numAgents*self.task.action_dim_per_agent)
             else:
                 trajectories[i, :, :] = inputs_frame_noiseLess
+                action_traj[i-1, :, :] = actions_noiseless.reshape(-1,self.task.numAgents*self.task.action_dim_per_agent)
 
-        return trajectories
+        # Get last action
+        if hasattr(self.task, "reduceObservability") and callable(getattr(self.task, "reduceObservability")):
+            inputs_frame = self.task.reduceObservability(inputs_frame)
+
+        closed_loop_dynamics = torch.cat(self.flocking_dynamics(0, inputs_frame), dim=1)
+        actions_noiseless = self.task.computeActions(closed_loop_dynamics)
+        actions = self.task.addNoise(actions_noiseless, True)
+        aux_act = actions if self.return_noisy_obs else actions_noiseless
+        aux_act = aux_act.reshape(-1,self.task.numAgents*self.task.action_dim_per_agent)
+        action_traj[-1,:,:] = aux_act
+        # ----------------
+
+        return trajectories, action_traj, rewards
+    
     
     def next_filename(self, base_name, extension):
         index = 0

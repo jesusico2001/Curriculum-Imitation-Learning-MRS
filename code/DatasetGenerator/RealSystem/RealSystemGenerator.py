@@ -37,4 +37,4 @@ class RealSystemGenerator(Generator):
             demonstrations[:, l*k:l*(k+1), :] = (trajectory.reshape(-1, self.episode_difficulty, 8 * self.na).transpose(0, 1))
             print('\tInstance '+str(k)+'.')
 
-        return demonstrations
+        return demonstrations, None, None

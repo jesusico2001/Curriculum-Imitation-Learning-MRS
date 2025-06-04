@@ -82,15 +82,16 @@ class TrainingAgent():
     def trainingLoop(self):
         self.checkExistingTraining()
         # torch.autograd.set_detect_anomaly(True)
-
+        # os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+        
         # Datasets
-        train_data, val_data = self.dataset_builder.BuildDatasets(self.numSamples_dataset)
+        train_data, train_actions, val_data, val_actions = self.dataset_builder.BuildDatasets(self.learn_system.action_loss)
 
         nextEpochVal = 0
         for epoch in range(0, self.epochs):
             # Run and compute loss
             difficulties = self.teacher.getDifficulties(self.train_batch_size)
-            inputs_train, target_train, top_difficulty = self.buildInputsTargets(train_data, self.train_batch_size, difficulties)
+            inputs_train, target_train, top_difficulty = self.buildInputsTargets(train_data, train_actions, self.train_batch_size, difficulties)
             
             loss_train = self.runEpochLoss(inputs_train, target_train, difficulties, top_difficulty)
 
@@ -108,7 +109,7 @@ class TrainingAgent():
                 print('- - - - - - - - -')
                 print("|Training|\n  --Loss = ", loss_train.detach().cpu().numpy(), "\n  --Avg. Difficulty = ", difficulties.detach().cpu().numpy().mean())
 
-                student_loss_distr = self.validate(val_data, self.validation_batch_size)
+                student_loss_distr = self.validate(val_data, val_actions, self.validation_batch_size)
                 print('===============================================\n')
             
                 # Store checkpoint 
@@ -128,16 +129,15 @@ class TrainingAgent():
         self.saveHistory()     
         return
     
-    def buildInputsTargets(self, trajectories, batch_size, difficulties):
+    def buildInputsTargets(self, trajectories, actions, batch_size, difficulties):
         # print("trajectories", trajectories.shape)
 
         # Select batch
-        chosen_batch  = torch.arange(0,batch_size) # debug
-
-        # chosen_batch  = torch.randperm(trajectories.size(1))[:batch_size]
-        self.chosen_batch= chosen_batch # debug
+        chosen_batch  = torch.randperm(trajectories.size(1))[:batch_size]
 
         batch = trajectories[:,chosen_batch,:]
+        if self.learn_system.action_loss:
+            batch_actions = actions[:,chosen_batch,:]
 
         # Select initial states for traj. of numSamples
         top_difficulty = max(difficulties)
@@ -147,28 +147,45 @@ class TrainingAgent():
         chosen_states = chosen_initial_state.unsqueeze(1) + torch.arange(top_difficulty)
         chosen_states = [row[:size] for row, size in zip(chosen_states, difficulties)]
 
-        # Build uniform unbiased batch
-        numAgents = self.learn_system.task.numAgents
+        # Inputs
         inputs = torch.zeros([batch_size, batch.shape[2]]).to(self.device)
-        targets = torch.zeros([top_difficulty, batch_size, 4*numAgents]).to(self.device)
-        batch_states = self.learn_system.task.getRobotStates(batch)
         for i in range(batch_size):
             inputs[i, :] = batch[chosen_initial_state[i], i, :]
-            targets[:difficulties[i], i, :] = batch_states[chosen_states[i], i, :]
-        
+
+        # Targets
+        numAgents = self.learn_system.task.numAgents
+        if self.learn_system.action_loss:
+            # Action targets
+            targets = torch.zeros([top_difficulty, batch_size, self.learn_system.task.action_dim_per_agent*numAgents]).to(self.device)
+            for i in range(batch_size):
+                targets[:difficulties[i], i, :] = batch_actions[chosen_states[i], i, :]
+        else:
+            # Observation targets
+            targets = torch.zeros([top_difficulty, batch_size, 4*numAgents]).to(self.device)
+            batch_states = self.learn_system.task.getRobotStates(batch)
+            for i in range(batch_size):
+                targets[:difficulties[i], i, :] = batch_states[chosen_states[i], i, :]
+
         return inputs, targets, top_difficulty
 
     def runEpochLoss(self, inputs, target, difficulties, max_difficulty):
+        action_loss = self.learn_system.action_loss
+
         # Run epoch
-        output = self.learn_system.forward(inputs, max_difficulty)
-        assert torch.isfinite(output).all()
+        obs, actions, _ = self.learn_system.forward(inputs, max_difficulty)
+        assert torch.isfinite(obs).all()
 
         # Mask lower difficulties with 0's at the end
         for i, ns in enumerate(difficulties):
-            output[ns:,i,:] = torch.zeros([max_difficulty-ns, output.shape[2]])    
+            if action_loss:
+                actions[ns:,i,:] = torch.zeros([max_difficulty-ns, actions.shape[2]])    
+            else:
+                obs[ns:,i,:] = torch.zeros([max_difficulty-ns, obs.shape[2]])    
 
         # Compute loss
-        L = self.L2_loss_train(self.learn_system.task.getRobotStates(output), target, difficulties)
+        prediction = self.learn_system.task.getRobotStates(obs) if not action_loss else actions
+
+        L = self.L2_loss_train(prediction, target, difficulties)
         return L
 
     def L2_loss_train(self, u, v, ns_distr):
@@ -179,10 +196,10 @@ class TrainingAgent():
     # ============
     # |Validation|
     # ============
-    def validate(self, val_data, validation_size):
+    def validate(self, val_data, val_actions, validation_size):
         # Build targets and validate with maxNumSamples (normalized Loss)          
         difficulties = self.teacher.getValidationDifficulties(validation_size)
-        inputs_val, target_val, top_difficulty = self.buildInputsTargets(val_data, validation_size, difficulties)
+        inputs_val, target_val, top_difficulty = self.buildInputsTargets(val_data, val_actions, validation_size, difficulties)
         val_loss_distr, avg_loss = self.validation_loss_distr(inputs_val, target_val, difficulties, top_difficulty)
 
         self.history["loss_val_distr"].append(self.teacher.transformValLoss(val_loss_distr))
@@ -196,14 +213,16 @@ class TrainingAgent():
         
         # Compute trajectories
         with torch.no_grad():
-            output = self.learn_system.forward(inputs_val, max_difficulty)
+            obs, actions, _ = self.learn_system.forward(inputs_val, max_difficulty)
 
         # Mask lower difficulties with 0's at the end
         for i, ns in enumerate(difficulties):
-            output[ns:,i,:] = torch.zeros([max_difficulty-ns, output.shape[2]])    
+            obs[ns:,i,:] = torch.zeros([max_difficulty-ns, obs.shape[2]])    
 
         # Raw losses
-        losses = (self.learn_system.task.getRobotStates(output) - target_val).pow(2)
+        prediction = self.learn_system.task.getRobotStates(obs) if not self.learn_system.action_loss else actions
+
+        losses = (prediction - target_val).pow(2)
         losses = losses.sum(dim=(0,2)) / target_val.shape[2]
 
         # Sum of losses for each difficulty
@@ -225,7 +244,7 @@ class TrainingAgent():
         # Go back to training mode
         self.learn_system.train()  
 
-        del difficulty_count, loss_accumulated, losses, output
+        del difficulty_count, loss_accumulated, losses, obs
     
         return loss_distr.detach().cpu().numpy(), avg_loss.detach().cpu().numpy()
     

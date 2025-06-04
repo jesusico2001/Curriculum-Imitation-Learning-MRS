@@ -11,6 +11,7 @@ class EvalAgent(TrainingAgent, ABC):
         self.loaded_checkpoint_epoch = -1
 
         self.learn_system.return_noisy_obs = False
+        self.learn_system.action_loss = False
         
     def trainingLoop(self):
           raise Exception("EvalAgent cannot call trainingLoop().")

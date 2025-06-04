@@ -19,9 +19,9 @@ class Balance(TaskVMAS):
     def reduceObservability(self, inputs):
         input_vars = inputs.clone()
         if not self.package_is_visible:
-            obs_mask = torch.ones(input_vars.shape[1], dtype=bool)
-            obs_mask[self.feature_index["pos_robot_for_package"]] = False
-            obs_mask[self.feature_index["package_velocities"]] = False
+            obs_mask = torch.zeros(input_vars.shape[1], dtype=bool)
+            obs_mask[self.feature_index["pos_robot_for_package"]] = True
+            obs_mask[self.feature_index["package_velocities"]] = True
 
             pos_robot_for_goal = input_vars[:,self.feature_index["pos_robot_for_package"]] + input_vars[:,self.feature_index["pos_package_for_goal"]]
 
@@ -120,3 +120,11 @@ class Balance(TaskVMAS):
 
         self.feature_index["line_angular_velocities"] = angvel_line_idx
         self.feature_index["line_rotation"] = rotation_line_idx
+
+    def numCompletedTasks(self, trajectory):
+        final_state = trajectory[-1,:]
+        goal_pos = final_state[self.feature_index["pos_package_for_goal"]].reshape(-1,2)
+        dists = torch.norm(goal_pos, dim=1)
+        completed = dists < 0.075
+        return completed.sum()
+

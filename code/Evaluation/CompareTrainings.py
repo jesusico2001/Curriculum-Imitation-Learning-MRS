@@ -48,5 +48,5 @@ plt.legend(fontsize=20)
 plt.grid(True)
 plt.show()
 
-# plt.savefig("saves/trainComparisons/test//train_val_losses.png")
+# plt.savefig("saves/trainComparisons/test/train_val_losses.png")
 plt.close()

@@ -9,7 +9,8 @@ from Task.LEMURS.FixedSwapping import FixedSwapping
 from Task.VMAS.Navigation import Navigation
 from Task.VMAS.Balance import Balance
 from Task.VMAS.Passage import Passage
-# from Task.Balance import Balance
+from Task.VMAS.Mall.Mall import Mall
+
 import yaml
 
 class Tasks(Enum):
@@ -19,6 +20,7 @@ class Tasks(Enum):
     Navigation = "navigation"
     Balance = "balance"
     Passage = "passage"
+    Mall = "mall"
 
 def TaskBuilder(config):
     if config["task"]["type"] == Tasks.FS.value:
@@ -33,7 +35,9 @@ def TaskBuilder(config):
         return Balance(config)
     if config["task"]["type"] == Tasks.Passage.value:
         return Passage(config)
-    
+    if config["task"]["type"] == Tasks.Mall.value:
+        return Mall(config)
+
     else:
         print("Unknown task: ", config["task"]["type"])
         exit(0)

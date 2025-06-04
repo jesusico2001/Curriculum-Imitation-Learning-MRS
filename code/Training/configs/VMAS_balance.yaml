@@ -3,7 +3,7 @@ task:
   lib: VMAS
   num_agents: 4
   episode_difficulty: 300
-  observation_noise_factor: 0.1
+  robot_obs_noise: 0.1
   package_is_visible: false
 learn_system:
   type: LEMURS

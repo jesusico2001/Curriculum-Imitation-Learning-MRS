@@ -31,8 +31,8 @@ class TrajectoryVisualizer(EvalAgent):
     def __plotFrame(self, epoch, real_trajectory):
         self.load_checkpoint(epoch)
         with torch.no_grad():
-            learned_trajectory = self.learn_system.forward(real_trajectory[0,:].unsqueeze(0), real_trajectory.shape[0]).squeeze(1)
-
+            learned_trajectory, _, _ = self.learn_system.forward(real_trajectory[0,:].unsqueeze(0), real_trajectory.shape[0])
+            learned_trajectory = learned_trajectory.squeeze(1)
         # Plotting
         plt.rcParams.update({'font.size': 20})
         plt.figtext(0.12, 0.9, "Iteration: " + str(epoch) + " of " + str(self.epochs),fontsize="15")

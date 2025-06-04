@@ -1,13 +1,15 @@
 task:
   type: navigation
   lib: VMAS
-  num_agents: 4
+  num_agents: 10
   episode_difficulty: 100
-  observation_noise_factor: 0.1
+  robot_obs_noise: 0
+  action_noise_factor: 0
 learn_system:
   type: LEMURS
   depth: 3
   open_loop: true
+  action_loss: false
   learning_rate: 0.005
 teacher: 
   max_difficulty: 50

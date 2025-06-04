@@ -12,12 +12,15 @@ class Task(ABC):
         
         self.numAgents = config["task"]["num_agents"]
         self.episode_difficulty = config["task"]["episode_difficulty"]
-        self.observation_noise_factor = config["task"]["observation_noise_factor"]
+        self.robot_obs_noise = config["task"]["robot_obs_noise"]
+        self.action_noise_factor = config["task"]["action_noise_factor"]
 
         self.agent_input_size = agent_input_size
         self.communication_radius = communication_radius
         self.feature_index = self.buildFeatureIndex()
-    
+
+        self.simulation_step = 0.1 # Default temporal step (assumed for RL envs)
+
     @abstractmethod
     def buildFeatureIndex(self):
         pass
@@ -55,6 +58,12 @@ class Task(ABC):
         return pos, vel
 
     # Noise in observations
-    def addNoise(self, trajectories):
-        noise = torch.randn_like(trajectories)  * self.observation_noise_factor
-        return trajectories + noise
+    def addNoise(self, data, actions=False):
+        factor = self.action_noise_factor if actions else self.robot_obs_noise
+        noise = torch.randn_like(data)  * factor
+        return data + noise
+    
+    # For evaluation
+    @abstractmethod
+    def numCompletedTasks(self, trajectory):
+        pass

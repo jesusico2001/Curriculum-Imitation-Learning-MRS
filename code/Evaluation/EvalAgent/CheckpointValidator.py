@@ -58,7 +58,7 @@ class CheckpointValidator(EvalAgent):
         # Load dataset
         valData = self.dataset_builder.BuildArbitraryNumAgents("val", numAgents, self.learn_system.return_noisy_obs)
         difficulties = torch.ones(self.validation_batch_size, dtype=int) * difficulty
-        inputs_val, target_val, top_difficulty = self.buildInputsTargets(valData, self.validation_batch_size, difficulties)
+        inputs_val, target_val, top_difficulty = self.buildInputsTargets(valData, None, self.validation_batch_size, difficulties)
         
         losses = []
         epochs = torch.load(self.path_manager.getPathHistory()+"/val_epochs.pth")
@@ -112,7 +112,7 @@ class CheckpointValidator(EvalAgent):
         try:
             myLearnSystem.load_state_dict(torch.load(path_checkpoints+"/epoch_"+str(epoch_save)+".pth", map_location=device))
             myLearnSystem.eval()
-            my_learned_trajectory = myLearnSystem.forward(initial_state.unsqueeze(dim=0).to(device), simulation_time, step_size).squeeze(dim=1)
+            my_learned_trajectory, _ = myLearnSystem.forward(initial_state.unsqueeze(dim=0).to(device), simulation_time, step_size).squeeze(dim=1)
             
             plt.clf()
             plotFrame(my_learned_trajectory, real_trajectory, nEpochs[-1], epoch_save, maxNumSamples, numAgents)

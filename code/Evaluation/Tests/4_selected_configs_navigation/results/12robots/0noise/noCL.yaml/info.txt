@@ -1,0 +1,7 @@
+L2 loss: 0.012454966083168983
+Avg dist error: 0.03796100616455078
+Min dist error: -0.06187881529331207
+Smoothness error: -0.898834228515625
+Area between curves: 0.36017230610469897
+ Reward error: 0.026936063542962074
+Task completed error: 0.25

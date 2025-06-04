@@ -67,4 +67,9 @@ class Passage(TaskVMAS):
         self.feature_index["pos_goal_for_agent"] = pos_goal_idx
         self.feature_index["pos_passage_for_agent"] = pos_passage_idx
 
-
+    def numCompletedTasks(self, trajectory):
+        final_state = trajectory[-1,:]
+        goal_pos = final_state[self.feature_index["goal_rel_positions"]].reshape(-1,2)
+        dists = torch.norm(goal_pos, dim=1)
+        completed = dists < 0.075
+        return completed.sum()
