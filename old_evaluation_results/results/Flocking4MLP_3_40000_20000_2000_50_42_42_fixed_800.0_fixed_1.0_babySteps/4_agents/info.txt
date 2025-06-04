@@ -1,6 +1,0 @@
-Best epoch: 2600
-L2 loss: 0.6458320021629333
-Avg dist error: 0.8647513389587402
-Min dist error: 0.16678601503372192
-Smoothness error: -32.4832079410553
-Area between curves: 0.37495098508727587
