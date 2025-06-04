@@ -1,6 +1,6 @@
 #Evaluation results
-saves_old/*
-old_evaluation_results/*
+saves_old
+old_evaluation_results
 code/saves/*
 code/*.gif
 code/scripts
