@@ -1,21 +1,21 @@
-import sys, os, yaml, argparse, shutil
+import sys, os, yaml, argparse
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../../..")
 from pathlib import Path
+import torch, gc
 
 from DatasetGenerator.GeneratorBuilder import GeneratorBuilder
 from TrainEvalConfig import TrainEval
 
 def main(teacher, gpu):
     path_configs = os.path.dirname(os.path.abspath(__file__))+"/configs/"
-    path_results = os.path.dirname(os.path.abspath(__file__))+"/results/"
-    path_config = path_configs + "VMAS_navigation.yaml"
+    path_config = path_configs + "VMAS_passage.yaml"
 
-    num_agents = [6, 12]
-    noise_levels = [0, 0.05, 0.1, 0.25]
+    num_agents = [12]
+    
+    noise_levels = [0.25]
+
     for na in num_agents:
         for noise in noise_levels:
-            path = path_results+str(na)+"robots/"+str(noise)+"noise/"+teacher+"/"
-
             with open(path_configs+teacher, "r") as file:
                 config_changes = yaml.safe_load(file)
                 config_changes["task.robot_obs_noise"] = noise
@@ -24,11 +24,15 @@ def main(teacher, gpu):
             
             
             gen = GeneratorBuilder(path_config, config_changes)
-            path_origin = gen.path_manager.getPathEvaluation()
-            if not os.path.isdir(path_origin) or not os.listdir(path_origin):
+            if not os.path.isdir(gen.path_manager.getPathDatasets()) or len(os.listdir(gen.path_manager.getPathDatasets())) < 2:
                 print(gen.path_manager.getPathDatasets()+" is not an existing path.")
-                exit()
-            shutil.copytree(path_origin, path, dirs_exist_ok=True)
+                gen.generateTrainValTest()
+            del gen
+            
+            TrainEval(path_config, config_changes)
+            gc.collect()
+            torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

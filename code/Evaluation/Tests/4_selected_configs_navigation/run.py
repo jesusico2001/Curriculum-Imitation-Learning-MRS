@@ -10,9 +10,11 @@ def main(teacher, gpu):
     path_configs = os.path.dirname(os.path.abspath(__file__))+"/configs/"
     path_config = path_configs + "VMAS_navigation.yaml"
 
-    num_agents = [12]
+    num_agents = [6]
+    
     noise_levels = [0, 0.05, 0.1, 0.25]
     noise_levels = [0.25]
+
     for na in num_agents:
         for noise in noise_levels:
             with open(path_configs+teacher, "r") as file:

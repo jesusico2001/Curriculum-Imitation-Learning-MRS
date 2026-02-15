@@ -128,3 +128,6 @@ class Balance(TaskVMAS):
         completed = dists < 0.075
         return completed.sum()
 
+
+    def flagBadTrajectories(self, trajectories):
+        return torch.zeros((trajectories.shape[1], self.numAgents), dtype=torch.bool, device=self.device)

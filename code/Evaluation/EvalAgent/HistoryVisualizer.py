@@ -1,3 +1,5 @@
+import os
+import shutil
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
@@ -154,8 +156,3 @@ class HistoryVisualizer(EvalAgent):
         plt.grid(True)
         # plt.show()
 
-
-    # ==========================================
-    
-    def __loadFromHistory__(self, filename):
-        return torch.load(self.path_manager.getPathHistory()+"/"+filename+".pth")

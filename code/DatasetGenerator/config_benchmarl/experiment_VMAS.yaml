@@ -58,4 +58,4 @@ restore_file: null
 restore_map_location: null
 checkpoint_at_end: True
 checkpoint_interval: 1200000
-keep_checkpoints_num: 3
+keep_checkpoints_num: 1

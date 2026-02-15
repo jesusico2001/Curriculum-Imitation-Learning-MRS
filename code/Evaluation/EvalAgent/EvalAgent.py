@@ -20,3 +20,19 @@ class EvalAgent(TrainingAgent, ABC):
         if self.loaded_checkpoint_epoch != epoch:
             self.learn_system.load_state_dict(torch.load(self.path_manager.getPathCheckpoints()+"/epoch_"+str(epoch)+".pth", map_location=self.device, weights_only=True),)
             self.loaded_checkpoint_epoch = epoch
+
+
+    # ==========================================
+    
+    def __loadFromHistory__(self, filename):
+        return torch.load(self.path_manager.getPathHistory()+"/"+filename+".pth")
+    
+    def __loadEvalMetrics__(self, dataset="val", numAgents=None, simulated_noise=None):
+        na = self.learn_system.task.numAgents if numAgents is None else numAgents
+
+        if simulated_noise is not None:
+            path = self.path_manager.getPathEvaluation() + f"/metrics_{dataset}_{na}agents_{simulated_noise}noise.pth"
+        else:
+            path = self.path_manager.getPathEvaluation() + f"/metrics_{dataset}_{na}agents.pth"
+            
+        return torch.load(path)

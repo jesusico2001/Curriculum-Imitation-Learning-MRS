@@ -20,6 +20,7 @@ class Task(ABC):
         self.feature_index = self.buildFeatureIndex()
 
         self.simulation_step = 0.1 # Default temporal step (assumed for RL envs)
+        self.robot_radius = 0.1 # Radius of the robot, used for collision detection
 
     @abstractmethod
     def buildFeatureIndex(self):
@@ -60,10 +61,13 @@ class Task(ABC):
     # Noise in observations
     def addNoise(self, data, actions=False):
         factor = self.action_noise_factor if actions else self.robot_obs_noise
-        noise = torch.randn_like(data)  * factor
+        noise = (torch.randn_like(data) + factor)
         return data + noise
     
-    # For evaluation
     @abstractmethod
     def numCompletedTasks(self, trajectory):
+        pass
+
+    @abstractmethod
+    def flagBadTrajectories(self, trajectories):
         pass

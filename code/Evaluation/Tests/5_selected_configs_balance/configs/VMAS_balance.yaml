@@ -1,11 +1,11 @@
 task:
-  type: navigation
+  type: balance
   lib: VMAS
-  num_agents: 12
-  episode_difficulty: 200
+  num_agents: 6
+  episode_difficulty: 300
   robot_obs_noise: 0
   action_noise_factor: 0
-  map_size: [5,5]
+  package_is_visible: true
 learn_system:
   type: LEMURS
   depth: 3
@@ -21,7 +21,7 @@ teacher:
   interval_parameter: 200
   increment_policy: fixed
   increment_parameter: 1
-  old_task_quota: 0.3
+  old_task_quota: 0.2
 general:
   epochs: 5000
   train_size: 5000

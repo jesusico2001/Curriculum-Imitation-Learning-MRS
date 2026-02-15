@@ -47,7 +47,7 @@ class VMASGenerator(Generator):
                 
                 done, truncated = False, False
                 while not (truncated):
-                    env.render()
+                    # env.render()
                     with torch.no_grad():
                         action = self.agent.forward(obs)[3]
                     action = [ [a.tolist()] for a in action]
@@ -61,7 +61,7 @@ class VMASGenerator(Generator):
                     for a, l in enumerate(obs):
                         demonstrations[i, j, a, :] = torch.tensor(l)
                     rewards[i,j,:] = torch.stack(reward).squeeze(1)
-
+                
                 with torch.no_grad():
                     action = self.agent.forward(obs)[3]
                     action = [ [a.tolist()] for a in action]

@@ -1,3 +1,4 @@
+import math
 import argparse, os
 import torch, yaml, imageio
 import matplotlib.pyplot as plt
@@ -9,7 +10,7 @@ from Evaluation.EvalAgent.EvalAgent import EvalAgent
 class TrajectoryVisualizer(EvalAgent):    
     def __init__(self, path_config_train, config_changes=None):
         super().__init__(path_config_train, config_changes)
-        self.colors = plt.cm.get_cmap('hsv', self.learn_system.task.numAgents+1)
+        self.colors = plt.cm.get_cmap('tab10', self.learn_system.task.numAgents+1)
     
 
     def plotTrajectoriesEpoch(self, epoch, numExamples, split_dataset):
@@ -44,24 +45,35 @@ class TrajectoryVisualizer(EvalAgent):
         plt.yticks(fontsize=20)
         return learned_trajectory
     
-    def plotTrajectories(self, trajectory, linestyle, description):
+    def plotTrajectories(self, trajectory, linestyle, description, linewidth=2):
         trajectory = trajectory.detach().cpu().numpy()
         pos, _ = self.learn_system.task.getPosVel(trajectory)
         
         for i in range(self.learn_system.task.numAgents):
-                plt.plot(pos[:, i, 0], pos[:, i, 1], color=self.colors(i), linewidth=2, linestyle=linestyle, label=description if i==0 else '')
+                plt.plot(pos[:, i, 0], pos[:, i, 1], color=self.colors(i), linewidth=linewidth, linestyle=linestyle, label=description if i==0 else '')
 
-    def plotTrajectoriesClean(self, trajectory, description):
+    def plotTrajectoriesClean(self, trajectory, description, step = 1):
         trajectory = trajectory.detach().cpu().numpy()
         pos, _ = self.learn_system.task.getPosVel(trajectory)
-
-        alphas = torch.linspace(0.15, 0.9, steps=trajectory.shape[0]).numpy()
+    
+        alphas = torch.linspace(0.1, 0.4, steps=trajectory.shape[0]).numpy()
         for i in range(self.learn_system.task.numAgents):
             x = pos[:, i, 0]
             y = pos[:, i, 1]
             
-            for j in range(len(x)):
-                plt.scatter(x[j], y[j], color=self.colors(i), alpha=alphas[j], s=200)
+            for j in range(0, len(x), step):
+                plt.scatter(x[j], y[j], color=self.colors(i), alpha=alphas[j], s=200, label=description if i==0 and j>=len(x)-step else '')
+
+    def plotFinalPos(self, trajectory, marker='s'):
+        # Convert trajectory tensor to numpy array
+        trajectory = trajectory.detach().cpu().numpy()
+        # Get positions from trajectory
+        pos, _ = self.learn_system.task.getPosVel(trajectory)
+        # Plot the final position of each agent
+        final_pos = pos[-1]  # Shape: [numAgents, 2]
+        for i in range(self.learn_system.task.numAgents):
+            plt.scatter(final_pos[i, 0], final_pos[i, 1], color=self.colors(i), marker=marker, s=150, edgecolors='black', linewidths=2)
+
 
     # Video
     # =====

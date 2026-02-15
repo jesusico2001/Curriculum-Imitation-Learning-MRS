@@ -2,6 +2,7 @@ from collections import namedtuple
 
 from DatasetGenerator.VMAS.VMASGenerator import VMASGenerator
 import torch
+import torch.nn.functional
 
 class PassageGenerator(VMASGenerator):
     def __init__(self, config):
@@ -31,13 +32,23 @@ class PassageGenerator(VMASGenerator):
             repulsion_agents  = self.getAgentRepulsion(pos)
             repulsion_wall  = self.getWallRepulsion(pos_passage_for_agent)
 
-            forces = 2*attraction + 0.01*repulsion_agents + 0.01*repulsion_wall
+            forces = 2 * attraction + 0.3 * repulsion_agents
             return [None, None, None, forces]
 
         def getAttractiveTerm(self, goal, passage):
             overshoot = 0.5
-            hasPassed = (passage[:,1] < -overshoot).unsqueeze(-1).repeat(1,2)
-            return goal * hasPassed + (passage + torch.tensor([0,overshoot])) * ~hasPassed
+            hasPassed_1 = (passage[:,0].abs() < 0.1).unsqueeze(-1).repeat(1,2)
+            hasPassed_2 = (passage[:,1] <= -overshoot*0.9).unsqueeze(-1).repeat(1,2)
+
+            v1 =  passage.clone()
+            v1[:,1] = 0 
+            v1 = v1 
+            v = goal * hasPassed_2 + (passage + torch.tensor([0,overshoot+0.1])) * hasPassed_1 * ~hasPassed_2 +  v1 * ~hasPassed_1  * ~hasPassed_2
+            v = torch.nn.functional.normalize(v, p=2, dim=1)
+        
+            return v
+        
+
             
         def getAgentRepulsion(self, pos):
             na = self.task.numAgents
@@ -46,7 +57,7 @@ class PassageGenerator(VMASGenerator):
             pos_rel = p2-p1
             
             norm = torch.linalg.vector_norm(pos_rel, dim=-1) + 0.001
-            mask = (norm < 0.2).unsqueeze(-1).repeat(1,1,2)
+            mask = (norm < 0.5).unsqueeze(-1).repeat(1,1,2)
             k = 1/norm.unsqueeze(-1).repeat(1,1,2)   
             
             return torch.sum(k*mask*pos_rel,1)

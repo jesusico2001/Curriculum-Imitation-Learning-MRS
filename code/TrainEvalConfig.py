@@ -3,9 +3,10 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../..")
 import gc, torch
 from Training.TrainingAgent import TrainingAgent
 from Evaluation.EvalAgent.HistoryVisualizer import HistoryVisualizer
-from Evaluation.EvalAgent.CheckpointValidator import CheckpointValidator
+from Evaluation.EvalAgent.LossValidator import LossValidator
 from Evaluation.EvalAgent.PerformanceMeasurer import PerformanceMeasurer
 from Evaluation.EvalAgent.TrajectoryVisualizer import TrajectoryVisualizer
+from Evaluation.EvalAgent.MetricComputer import MetricComputer
 
 def clearGPU():
     gc.collect()
@@ -19,17 +20,16 @@ def TrainEval(path_config, config_changes):
     del trainAgent
     clearGPU()
 
-    agent = CheckpointValidator(path_config, config_changes)
-    # agent.aux_run()
-    agent.validateLossMaxDifficulty(agent.learn_system.task.numAgents)
-    agent.validateScalability([agent.learn_system.task.numAgents])
-    del agent
-    clearGPU()
-    agent = PerformanceMeasurer(path_config, config_changes)
-    agent.trainingPerformance(agent.learn_system.task.numAgents)
+    agent = LossValidator(path_config, config_changes)
+    agent.validateLossTeacherDifficulty()
+    agent.validateLossEpisodeDifficulty()
     del agent
     clearGPU()
     
+    agent = MetricComputer(path_config, config_changes)
+    agent.metricsEvolution()
+    clearGPU()
+
     agent = HistoryVisualizer(path_config, config_changes)
     agent.plotLossMaxDifficulty()
     agent.plotTrainValidationLosses()

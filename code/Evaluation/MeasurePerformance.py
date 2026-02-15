@@ -2,9 +2,9 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 
 from Evaluation.EvalAgent.PerformanceMeasurer import PerformanceMeasurer
-from Evaluation.EvalAgent.CheckpointValidator import CheckpointValidator
+from Evaluation.EvalAgent.LossValidator import LossValidator
 
-agent = CheckpointValidator("Training/configs/TVS_LEMURS_Online.yaml")
+agent = LossValidator("Training/configs/TVS_LEMURS_Online.yaml")
 agent.validateLossMaxDifficulty()
 del agent
 

@@ -87,10 +87,18 @@ class Navigation(TaskVMAS):
         final_state = trajectory[-1,:]
         goal_pos = final_state[self.feature_index["goal_rel_positions"]].reshape(-1,2)
         dists = torch.norm(goal_pos, dim=1)
-        completed = dists < 0.075
+        completed = dists < (self.robot_radius + self.robot_obs_noise) * 1.2 
         return completed.sum()
 
-        
+    def flagBadTrajectories(self, trajectories):
+        # Flag trajectories that do not reach the goal
+        final_state = trajectories[-1, :, :]
+        goal_pos = final_state[:, self.feature_index["goal_rel_positions"]].reshape(-1, self.numAgents, 2)
+        dists = torch.linalg.norm(goal_pos, dim=2)
+        bad_trajectories = dists > (self.robot_radius + 0.25)
+
+        return bad_trajectories
+    
     def getVMASConfig(self, expert_robots=False):
         conf = {    "world_spawning_x": self.map_size[0] / 2,
                     "world_spawning_y": self.map_size[1] / 2

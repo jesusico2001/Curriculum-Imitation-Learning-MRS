@@ -1,18 +1,21 @@
 import torch
 
 from Task.VMAS.TaskVMAS import TaskVMAS
-from torch.autograd import Variable
+from Task.VMAS.PassageScenario import Scenario as PassageScenario
 
+from torch.autograd import Variable
 class Passage(TaskVMAS):
     
     def __init__(self, config):
         inputSize = 8
         r = torch.as_tensor(0.5) 
         super().__init__(config, inputSize, r)
+        self.map_size = config["task"]["map_size"]
+
         self.__featureIndexPassage()
         self.simulation_step = 0.1
 
-        assert(self.numAgents == 5)
+        self.vmas_scenario =  PassageScenario()
 
     def setWorldStates(self, env, env_index, obs):
         # Extract data from observation
@@ -69,7 +72,22 @@ class Passage(TaskVMAS):
 
     def numCompletedTasks(self, trajectory):
         final_state = trajectory[-1,:]
-        goal_pos = final_state[self.feature_index["goal_rel_positions"]].reshape(-1,2)
+        goal_pos = final_state[self.feature_index["pos_goal_for_agent"]].reshape(-1,2)
         dists = torch.norm(goal_pos, dim=1)
-        completed = dists < 0.075
+        completed = dists < (self.robot_radius + 0.25)
         return completed.sum()
+    
+    def flagBadTrajectories(self, trajectories):
+        # Flag trajectories that do not reach the goal
+        final_state = trajectories[-1, :, :]
+        goal_pos = final_state[:, self.feature_index["pos_goal_for_agent"]].reshape(-1, self.numAgents, 2)
+        dists = torch.linalg.norm(goal_pos, dim=2)
+        bad_trajectories = dists > (self.robot_radius + 0.25)
+        return bad_trajectories
+
+
+    def getVMASConfig(self, expert_robots=False):
+        conf = {    "x_semidim": self.map_size[0] / 2,
+                    "y_semidim": self.map_size[1] / 2
+                }
+        return conf

@@ -5,7 +5,7 @@ from DatasetGenerator.GeneratorBuilder import GeneratorBuilder
 
 
 # gen = GeneratorBuilder("Training/configs/VMAS_navigation.yaml", {})
-gen = GeneratorBuilder("DatasetGenerator/VMAS/mall_config.yaml", {})
+gen = GeneratorBuilder("Evaluation/Tests/6_selected_configs_passage/configs/VMAS_passage.yaml", {})
 gen.generateTrainValTest()
 del gen
 

@@ -8,9 +8,9 @@ from TrainEvalConfig import TrainEval
 def main(teacher, gpu):
     path_configs = os.path.dirname(os.path.abspath(__file__))+"/configs/"
     path_results = os.path.dirname(os.path.abspath(__file__))+"/results/"
-    path_config = path_configs + "VMAS_navigation.yaml"
+    path_config = path_configs + "VMAS_balance.yaml"
 
-    num_agents = [6, 12]
+    num_agents = [3,6]
     noise_levels = [0, 0.05, 0.1, 0.25]
     for na in num_agents:
         for noise in noise_levels:

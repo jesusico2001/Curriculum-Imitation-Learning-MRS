@@ -17,7 +17,7 @@ class LEMURS(learnSystem):
     def flocking_dynamics(self, t, inputs):
         # Get inputs for the self-attention modules
         inputs  = nn.functional.normalize(inputs, p=2, dim=1)
-                
+             
         # Self attention modules
         R, J = self.__forwardRJ(inputs)
         # print("R = ",R.size())

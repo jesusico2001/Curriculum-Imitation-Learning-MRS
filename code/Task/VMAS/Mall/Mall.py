@@ -26,4 +26,5 @@ class Mall(TaskVMAS):
     def numCompletedTasks(self, trajectory):
         return 0
 
-        
+    def flagBadTrajectories(self, trajectories):
+        return torch.zeros((trajectories.shape[0], trajectories.shape[0], self.numAgents), dtype=torch.bool, device=self.device)
